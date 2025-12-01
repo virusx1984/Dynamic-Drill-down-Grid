@@ -6,94 +6,121 @@
     <title>Dynamic Drill-down Grid</title>
     <link href="css/bootstrap.min.css" rel="stylesheet">
     <style>
-        /* --- Layout & Scroll --- */
+        /* --- 4. Custom Scrollbar Styling --- */
         .table-container {
             max-height: 75vh;
             overflow: auto;
             position: relative;
             border: 1px solid #dee2e6;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            /* Custom Scrollbar for Webkit (Chrome, Safari, Edge) */
+            scrollbar-width: thin; /* Firefox */
+            scrollbar-color: #adb5bd #f1f1f1; /* Firefox */
         }
 
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .table-container::-webkit-scrollbar-thumb {
+            background: #adb5bd;
+            border-radius: 4px;
+        }
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #6c757d;
+        }
+
+        /* --- Table Layout --- */
         #mainTable {
             border-collapse: separate; 
             border-spacing: 0;
             width: 100%;
             margin-bottom: 0;
-            font-size: 0.9rem; /* Smaller font for compact view */
+            font-size: 0.9rem;
         }
 
-        /* --- Compact & No Wrap --- */
+        /* --- 3. Borders & No Wrap --- */
         #mainTable th, 
         #mainTable td {
-            white-space: nowrap; /* Requirement 1: No Wrap */
-            padding: 0.3rem 0.5rem; /* Requirement 1: Smaller Padding */
+            white-space: nowrap;
+            padding: 0.3rem 0.5rem;
             vertical-align: middle;
+            border: 1px solid #dee2e6 !important; /* Force 1px border */
+            border-top: none !important; /* Prevent double borders */
+            border-left: none !important;
+        }
+        
+        /* Ensure top/left borders for the table wrapper feel */
+        #mainTable thead th {
+            border-top: 1px solid #dee2e6 !important;
+        }
+        #mainTable tbody td:first-child, #mainTable thead th:first-child {
+            border-left: 1px solid #dee2e6 !important;
         }
 
-        /* --- Sticky Logic --- */
+        /* --- Sticky Logic (Clean, No Shadow) --- */
+        
         /* Header Vertical Sticky */
         #mainTable thead th {
             position: sticky;
             top: 0;
             background-color: #212529;
             color: white;
-            z-index: 20; /* High z-index to sit above data */
+            z-index: 20;
             cursor: pointer;
             user-select: none;
-            border-bottom: 2px solid #495057;
+            box-shadow: none !important; /* 2. No Shadow */
         }
         
         #mainTable thead th:hover {
             background-color: #343a40;
         }
 
-        /* Horizontal Sticky (Dynamic Class) */
-        /* These styles handle the 'frozen' state of columns */
+        /* Horizontal Sticky Columns */
         .sticky-col {
             position: sticky;
-            z-index: 10; /* Above normal cells, below header */
-            background-color: #f8f9fa; /* Body background */
-            border-right: 2px solid #dee2e6;
+            z-index: 10;
+            background-color: #f8f9fa; /* Light gray background to distinguish */
+            box-shadow: none !important; /* 2. No Shadow */
         }
 
-        /* Fix: Sticky Header + Sticky Column Intersection (Top Left) */
+        /* Top Left Corner Intersection */
         thead th.sticky-col {
-            z-index: 30 !important; /* Highest priority */
-            background-color: #212529; /* Keep header color */
+            z-index: 30 !important;
+            background-color: #212529;
             color: white;
         }
         
-        /* Fix: Sticky Footer + Sticky Column Intersection (Bottom Left) */
+        /* Footer Intersection */
         tfoot th.sticky-col,
         tfoot td.sticky-col {
             z-index: 30 !important;
-            background-color: #e9ecef; /* Footer bg */
-            border-top: 2px solid #dee2e6;
+            background-color: #e9ecef;
             bottom: 0; 
         }
 
-        /* Row Hover Effect */
+        /* Row Hover */
         .clickable-row { cursor: pointer; }
         .clickable-row:hover td { background-color: #e2e6ea; }
-        /* Ensure sticky cols update color on hover */
         .clickable-row:hover td.sticky-col { background-color: #dbe2e8; }
 
         /* Sort Icons */
-        .sort-icon { font-size: 0.8em; margin-left: 5px; color: #adb5bd; }
+        .sort-icon { font-size: 0.8em; margin-left: 5px; color: #6c757d; }
         .sort-active { color: #fff; }
         
-        /* Metric Checkbox Style */
         .metric-item { min-width: 120px; }
 
-        /* Total Row Styling */
+        /* Total Row */
         tfoot {
             position: sticky;
             bottom: 0;
             background-color: #e9ecef;
             font-weight: bold;
             z-index: 15;
-            box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+            box-shadow: none !important;
+            border-top: 2px solid #adb5bd !important; /* Slightly thicker top border for total */
         }
     </style>
 </head>
@@ -147,10 +174,11 @@
         </nav>
 
         <div class="table-container">
-            <table class="table table-bordered table-sm table-hover mb-0" id="mainTable">
+            <table class="table table-sm mb-0" id="mainTable">
                 <thead></thead>
                 <tbody></tbody>
-                <tfoot></tfoot> </table>
+                <tfoot></tfoot>
+            </table>
         </div>
         <div class="mt-2 text-muted small">
             Tip: Click headers to sort. Click rows to drill down.
@@ -277,12 +305,10 @@
         });
 
         if (currentLevel < config.levels.length) {
-            // Aggregation Mode
             const groupCol = config.levels[currentLevel];
             currentTableData = aggregateData(filteredData, groupCol);
             renderTable(currentTableData, groupCol, false);
         } else {
-            // Detail Mode
             currentTableData = filteredData;
             renderTable(currentTableData, null, true);
         }
@@ -310,7 +336,7 @@
         return parseFloat(val.toString().replace(/,/g, '')) || 0;
     }
 
-    // --- 4. Render Table (Updated for Freeze & Sum) ---
+    // --- 4. Render Table (Updated for Alignment) ---
     function renderTable(data, groupCol, isDetail) {
         const $thead = $('#mainTable thead');
         const $tbody = $('#mainTable tbody');
@@ -320,35 +346,36 @@
         $tbody.empty();
         $tfoot.empty();
 
-        // 1. Determine Display Columns
+        // 1. Determine Columns
         let displayCols = [];
         if (isDetail) {
-            // In detail view, we show ALL columns.
-            // But let's organize them: [Non-Value Cols] + [Value Cols]
             const nonValueCols = headers.filter(h => !config.valueCols.includes(h));
             displayCols = [...nonValueCols, ...config.valueCols];
         } else {
             displayCols = [groupCol, ...config.valueCols];
         }
 
-        // 2. Determine Sticky Columns (Requirement 3)
-        // Agg View: First column only.
-        // Detail View: All columns EXCEPT value columns.
+        // 2. Sticky Indices
         let stickyColIndices = [];
         if (isDetail) {
             displayCols.forEach((col, idx) => {
                 if (!config.valueCols.includes(col)) stickyColIndices.push(idx);
             });
         } else {
-            stickyColIndices.push(0); // Always freeze first col in agg view
+            stickyColIndices.push(0);
         }
 
         // 3. Render Header
         let headHtml = '<tr>';
         displayCols.forEach((col, idx) => {
             const isSticky = stickyColIndices.includes(idx);
+            const isValue = config.valueCols.includes(col);
+            
             const stickyClass = isSticky ? 'sticky-col' : '';
-            headHtml += `<th class="${stickyClass}" data-idx="${idx}" data-col="${col}">${col} <span class="sort-icon">⇅</span></th>`;
+            // 1. Align Right for Agg Cols
+            const alignClass = isValue ? 'text-end' : 'text-start'; 
+
+            headHtml += `<th class="${stickyClass} ${alignClass}" data-idx="${idx}" data-col="${col}">${col} <span class="sort-icon">⇅</span></th>`;
         });
         headHtml += '</tr>';
         $thead.html(headHtml);
@@ -358,15 +385,17 @@
             let tr = `<tr class="${!isDetail ? 'clickable-row' : ''}">`;
             displayCols.forEach((col, idx) => {
                 const isSticky = stickyColIndices.includes(idx);
+                const isValue = config.valueCols.includes(col);
+
                 const stickyClass = isSticky ? 'sticky-col' : '';
+                const alignClass = isValue ? 'text-end' : 'text-start'; // 1. Align Right
                 
                 let val = row[col];
-                // Format numbers if it's a value column
-                if (config.valueCols.includes(col)) {
+                if (isValue) {
                     val = parseNum(val).toLocaleString();
                 }
                 
-                tr += `<td class="${stickyClass}" data-idx="${idx}">${val === undefined || val === null ? '-' : val}</td>`;
+                tr += `<td class="${stickyClass} ${alignClass}" data-idx="${idx}">${val === undefined || val === null ? '-' : val}</td>`;
             });
             tr += '</tr>';
             const $tr = $(tr);
@@ -381,10 +410,9 @@
             $tbody.append($tr);
         });
 
-        // 5. Render Footer (Sum Row) - Requirement 2
+        // 5. Render Footer
         let totals = {};
         config.valueCols.forEach(c => totals[c] = 0);
-        
         data.forEach(row => {
             config.valueCols.forEach(c => {
                 totals[c] += parseNum(row[c]);
@@ -394,12 +422,15 @@
         let footHtml = '<tr>';
         displayCols.forEach((col, idx) => {
             const isSticky = stickyColIndices.includes(idx);
+            const isValue = config.valueCols.includes(col);
+
             const stickyClass = isSticky ? 'sticky-col' : '';
-            
+            const alignClass = isValue ? 'text-end' : 'text-start';
+
             if (idx === 0) {
                 footHtml += `<td class="${stickyClass}" data-idx="${idx}">TOTAL</td>`;
-            } else if (config.valueCols.includes(col)) {
-                footHtml += `<td class="${stickyClass}" data-idx="${idx}">${totals[col].toLocaleString()}</td>`;
+            } else if (isValue) {
+                footHtml += `<td class="${stickyClass} ${alignClass}" data-idx="${idx}">${totals[col].toLocaleString()}</td>`;
             } else {
                 footHtml += `<td class="${stickyClass}" data-idx="${idx}"></td>`;
             }
@@ -407,17 +438,12 @@
         footHtml += '</tr>';
         $tfoot.html(footHtml);
 
-        // 6. Apply Dynamic Left Offsets for Multiple Sticky Columns
-        // Because "position: sticky" needs a specific "left" value to stack horizontally.
+        // 6. Apply Dynamic Left Offsets
         let currentLeft = 0;
-        // We only look at the Header cells to calculate widths
         $thead.find('th').each(function(index) {
             if ($(this).hasClass('sticky-col')) {
                 const width = $(this).outerWidth();
-                
-                // Apply 'left' to all cells in this column (thead, tbody, tfoot)
                 $(`#mainTable th[data-idx="${index}"], #mainTable td[data-idx="${index}"]`).css('left', currentLeft + 'px');
-                
                 currentLeft += width; 
             }
         });
@@ -429,7 +455,7 @@
         });
     }
 
-    // --- 5. Sort & Breadcrumb (Unchanged Logic, just re-calling render) ---
+    // --- 5. Logic Helpers ---
     function handleSort(col, displayCols, isDetail) {
         if (sortState.col === col) {
             sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
@@ -460,7 +486,7 @@
             }
         });
 
-        renderTable(currentTableData, null, isDetail); // Re-render preserving view type
+        renderTable(currentTableData, null, isDetail);
     }
 
     function updateBreadcrumbs() {
