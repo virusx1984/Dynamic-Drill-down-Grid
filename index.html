@@ -1,387 +1,474 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dynamic Drill-down Grid</title>
     <link href="css/bootstrap.min.css" rel="stylesheet">
     <style>
-        /* Custom styles for nested tables */
+        /* --- Layout & Scroll --- */
+        .table-container {
+            max-height: 80vh;
+            /* Viewport height limit */
+            overflow: auto;
+            position: relative;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        #mainTable {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            margin-bottom: 0;
+        }
+
+        /* --- Sticky Header (Top) --- */
+        #mainTable thead th {
+            position: sticky;
+            top: 0;
+            background-color: #212529;
+            /* Dark header */
+            color: white;
+            z-index: 10;
+            cursor: pointer;
+            /* Indicate sortability */
+            user-select: none;
+            padding: 12px 8px;
+            white-space: nowrap;
+        }
+
+        #mainTable thead th:hover {
+            background-color: #343a40;
+        }
+
+        /* --- Sticky First Column (Left) --- */
+        #mainTable tbody td:first-child,
+        #mainTable thead th:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 11;
+            /* Higher than normal cells */
+            background-color: #f8f9fa;
+            /* Light gray for group col */
+            font-weight: bold;
+            border-right: 2px solid #dee2e6;
+        }
+
+        /* Top-Left Corner Intersection */
+        #mainTable thead th:first-child {
+            z-index: 20;
+            /* Highest priority */
+            background-color: #212529;
+            /* Match header */
+            color: white;
+        }
+
+        /* --- Row Styles --- */
         .clickable-row {
             cursor: pointer;
+            transition: background-color 0.2s;
         }
-        .clickable-row:hover {
-            background-color: #f8f9fa;
+
+        .clickable-row:hover td {
+            background-color: #e2e6ea;
         }
-        .nested-row {
-            background-color: #fcfcfc;
+
+        /* Ensure sticky col background changes on hover too */
+        .clickable-row:hover td:first-child {
+            background-color: #dbe2e8;
         }
-        .level-indicator {
-            display: inline-block;
-            width: 20px;
-            text-align: center;
-            font-weight: bold;
+
+        /* Sort Icons */
+        .sort-icon {
+            font-size: 0.8em;
+            margin-left: 5px;
+            color: #adb5bd;
+        }
+
+        .sort-active {
+            color: #fff;
         }
     </style>
 </head>
+
 <body>
 
-<div class="container mt-4">
-    <h2>Dynamic Drill-down Grid</h2>
-    
-    <div class="card mb-3">
-        <div class="card-header">1. Upload JSON</div>
-        <div class="card-body">
-            <input type="file" id="fileInput" class="form-control" accept=".json">
+    <div class="container-fluid p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3>Dynamic Drill-down Grid</h3>
+            <button id="btnReset" class="btn btn-outline-secondary btn-sm d-none">Reset Configuration</button>
         </div>
-    </div>
 
-    <div id="configSection" class="card mb-3 d-none">
-        <div class="card-header">2. Configuration</div>
-        <div class="card-body">
-            <div class="mb-3">
-                <label class="form-label">How many aggregation levels?</label>
-                <select id="levelCount" class="form-select" style="width: 200px;">
-                    <option value="1">1 Level</option>
-                    <option value="2" selected>2 Levels</option>
-                    <option value="3">3 Levels</option>
-                </select>
+        <div id="uploadSection" class="card mb-3">
+            <div class="card-header">1. Upload JSON</div>
+            <div class="card-body">
+                <input type="file" id="fileInput" class="form-control" accept=".json">
             </div>
-
-            <div id="groupColsContainer" class="mb-3 row"></div>
-
-            <div class="mb-3">
-                <label class="form-label">Select Aggregation Columns (Sum):</label>
-                <div id="valueColsContainer" class="d-flex flex-wrap gap-3"></div>
-            </div>
-
-            <button id="btnGenerate" class="btn btn-primary">Generate Grid</button>
         </div>
-    </div>
 
-    <div id="resultSection" class="d-none">
-        <h4>Result Grid</h4>
-        <div class="table-responsive">
-            <table class="table table-bordered table-hover" id="mainTable">
-                <thead class="table-dark">
-                    </thead>
-                <tbody>
-                    </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<script src="js/jquery-3.6.0.min.js"></script>
-<script src="js/bootstrap.bundle.min.js"></script>
-
-<script>
-    // Global storage for raw data and headers
-    let rawData = [];
-    let headers = [];
-    let config = {
-        levels: [], // Stores column names for each level
-        valueCols: []
-    };
-
-    // 1. Handle File Upload
-    $('#fileInput').on('change', function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            try {
-                rawData = JSON.parse(event.target.result);
-                if (rawData.length > 0) {
-                    headers = Object.keys(rawData[0]);
-                    initConfigurationUI();
-                }
-            } catch (err) {
-                alert('Invalid JSON file');
-                console.error(err);
-            }
-        };
-        reader.readAsText(file);
-    });
-
-    // 2. Initialize Configuration UI
-    function initConfigurationUI() {
-        $('#configSection').removeClass('d-none');
-        renderGroupSelectors();
-        renderValueSelectors();
-    }
-
-    // Render Dropdowns for Levels based on selection
-    $('#levelCount').on('change', renderGroupSelectors);
-
-    function renderGroupSelectors() {
-        const count = parseInt($('#levelCount').val());
-        const container = $('#groupColsContainer');
-        container.empty();
-
-        for (let i = 1; i <= count; i++) {
-            let html = `
-                <div class="col-md-4 mb-2">
-                    <label class="form-label">Level ${i} Column:</label>
-                    <select class="form-select level-select" data-level="${i}">
-                        <option value="">-- Select Column --</option>
-                        ${headers.map(h => `<option value="${h}">${h}</option>`).join('')}
-                    </select>
-                    <div class="form-text text-muted">
-                        ${i === 1 ? 'Base grouping.' : `Adds to Level ${i-1} grouping.`}
+        <div id="configSection" class="card mb-3 d-none">
+            <div class="card-header">2. Configuration</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Aggregation Levels</label>
+                        <select id="levelCount" class="form-select">
+                            <option value="1">1 Level</option>
+                            <option value="2" selected>2 Levels</option>
+                            <option value="3">3 Levels</option>
+                        </select>
+                    </div>
+                    <div class="col-md-9">
+                        <div id="groupColsContainer" class="row"></div>
                     </div>
                 </div>
-            `;
-            container.append(html);
-        }
-    }
 
-    // Render Checkboxes for Value Columns
-    function renderValueSelectors() {
-        const container = $('#valueColsContainer');
-        container.empty();
-        headers.forEach(h => {
-            let html = `
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Select Metric Columns (Sum):</label>
+                    <div id="valueColsContainer" class="d-flex flex-wrap gap-3 border p-3 rounded bg-light"></div>
+                </div>
+
+                <button id="btnGenerate" class="btn btn-primary w-100">Load Grid</button>
+            </div>
+        </div>
+
+        <div id="resultSection" class="d-none">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb bg-light p-2 rounded" id="breadcrumbList">
+                    <li class="breadcrumb-item active">Home</li>
+                </ol>
+            </nav>
+
+            <div class="table-container">
+                <table class="table table-bordered table-hover mb-0" id="mainTable">
+                    <thead></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="mt-2 text-muted small">
+                Tip: Click headers to sort. Click rows to drill down.
+            </div>
+        </div>
+    </div>
+
+    <script src="js/jquery-3.6.0.min.js"></script>
+    <script src="js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // --- State Management ---
+        let rawData = [];
+        let headers = [];
+
+        // Config State
+        let config = {
+            levels: [],     // ['cust', 'stack']
+            valueCols: []   // ['2026 Jan', ...]
+        };
+
+        // View State
+        let currentLevel = 0;   // 0 = Level 1, 1 = Level 2 ...
+        let filterStack = [];   // Stores filters: [{col: 'cust', val: 'Amazon'}, ...]
+        let currentTableData = []; // Data currently displayed
+        let sortState = { col: null, dir: 'asc' }; // Sort tracking
+
+        // --- 1. Initialization & Upload ---
+        $('#fileInput').on('change', function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                try {
+                    rawData = JSON.parse(event.target.result);
+                    if (rawData.length > 0) {
+                        headers = Object.keys(rawData[0]);
+                        initConfigurationUI();
+                        $('#uploadSection').addClass('d-none');
+                    }
+                } catch (err) {
+                    alert('Invalid JSON');
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        $('#btnReset').click(() => location.reload());
+
+        function initConfigurationUI() {
+            $('#configSection').removeClass('d-none');
+            renderGroupSelectors();
+            renderValueSelectors();
+        }
+
+        $('#levelCount').on('change', renderGroupSelectors);
+
+        function renderGroupSelectors() {
+            const count = parseInt($('#levelCount').val());
+            const container = $('#groupColsContainer');
+            container.empty();
+
+            for (let i = 1; i <= count; i++) {
+                let html = `
+                <div class="col-md-4 mb-2">
+                    <label class="form-label">Level ${i} By:</label>
+                    <select class="form-select level-select">
+                        <option value="">-- Choose --</option>
+                        ${headers.map(h => `<option value="${h}">${h}</option>`).join('')}
+                    </select>
+                </div>
+            `;
+                container.append(html);
+            }
+        }
+
+        function renderValueSelectors() {
+            const container = $('#valueColsContainer');
+            container.empty();
+            headers.forEach(h => {
+                let html = `
                 <div class="form-check">
                     <input class="form-check-input val-col-check" type="checkbox" value="${h}" id="chk_${h}">
                     <label class="form-check-label" for="chk_${h}">${h}</label>
                 </div>
             `;
-            container.append(html);
-        });
-    }
-
-    // 3. Generate Report
-    $('#btnGenerate').on('click', function() {
-        // Collect Config
-        const lvlCount = parseInt($('#levelCount').val());
-        config.levels = [];
-        
-        // Validate Level selections
-        let valid = true;
-        $('.level-select').each(function() {
-            const val = $(this).val();
-            if (!val) valid = false;
-            config.levels.push(val);
-        });
-
-        config.valueCols = [];
-        $('.val-col-check:checked').each(function() {
-            config.valueCols.push($(this).val());
-        });
-
-        if (!valid || config.valueCols.length === 0) {
-            alert('Please select columns for all levels and at least one value column.');
-            return;
+                container.append(html);
+            });
         }
 
-        $('#resultSection').removeClass('d-none');
-        renderRootTable();
-    });
-
-    // Helper: Clean and Parse Number
-    function parseNum(val) {
-        if (!val || val === '-') return 0;
-        if (typeof val === 'number') return val;
-        // Remove commas and parse
-        return parseFloat(val.toString().replace(/,/g, '')) || 0;
-    }
-
-    // Helper: Aggregate Data
-    function aggregateData(dataset, groupKeys, valueKeys) {
-        const groups = {};
-        
-        dataset.forEach(row => {
-            // Create a composite key for grouping
-            const key = groupKeys.map(k => row[k]).join('|||');
-            
-            if (!groups[key]) {
-                groups[key] = {
-                    _key: key,
-                    _count: 0,
-                    _rawRows: []
-                };
-                // Initialize sums
-                valueKeys.forEach(vk => groups[key][vk] = 0);
-                // Store grouping col values for display
-                groupKeys.forEach(gk => groups[key][gk] = row[gk]);
-            }
-            
-            groups[key]._count++;
-            groups[key]._rawRows.push(row);
-            
-            // Sum values
-            valueKeys.forEach(vk => {
-                groups[key][vk] += parseNum(row[vk]);
+        // --- 2. Generate Grid Logic ---
+        $('#btnGenerate').on('click', function () {
+            // validate config
+            config.levels = [];
+            $('.level-select').each(function () {
+                if ($(this).val()) config.levels.push($(this).val());
             });
-        });
 
-        return Object.values(groups);
-    }
+            config.valueCols = [];
+            $('.val-col-check:checked').each(function () {
+                config.valueCols.push($(this).val());
+            });
 
-    // 4. Rendering Logic
-
-    function renderRootTable() {
-        const $thead = $('#mainTable thead');
-        const $tbody = $('#mainTable tbody');
-        $thead.empty();
-        $tbody.empty();
-
-        // Level 1 Grouping Columns
-        const l1Col = config.levels[0];
-        
-        // Build Header
-        let headerHtml = '<tr><th style="width:50px"></th>'; // Expand icon col
-        headerHtml += `<th>${l1Col}</th>`; // Group Col
-        config.valueCols.forEach(vc => headerHtml += `<th>${vc}</th>`);
-        headerHtml += '</tr>';
-        $thead.append(headerHtml);
-
-        // Calculate Level 1 Data
-        const l1Data = aggregateData(rawData, [l1Col], config.valueCols);
-
-        // Render Rows
-        l1Data.forEach((row, index) => {
-            const rowId = `l1_${index}`;
-            let tr = `
-                <tr class="clickable-row" data-id="${rowId}" data-level="1" data-key="${row[l1Col]}">
-                    <td><span class="level-indicator">+</span></td>
-                    <td><b>${row[l1Col]}</b></td>
-                    ${config.valueCols.map(vc => `<td>${row[vc].toLocaleString()}</td>`).join('')}
-                </tr>
-                <tr id="child_${rowId}" class="d-none nested-row">
-                    <td colspan="${2 + config.valueCols.length}" class="p-3">
-                        <div id="container_${rowId}"></div>
-                    </td>
-                </tr>
-            `;
-            $tbody.append(tr);
-        });
-
-        bindClickEvents();
-    }
-
-    function bindClickEvents() {
-        // Unbind previous to prevent duplicates
-        $('.clickable-row').off('click').on('click', function() {
-            const $row = $(this);
-            const level = parseInt($row.data('level'));
-            const rowId = $row.data('id');
-            const $childRow = $(`#child_${rowId}`);
-            const $icon = $row.find('.level-indicator');
-
-            // Toggle visibility
-            if (!$childRow.hasClass('d-none')) {
-                $childRow.addClass('d-none');
-                $icon.text('+');
+            if (config.levels.length === 0 || config.valueCols.length === 0) {
+                alert('Please select levels and metric columns.');
                 return;
             }
 
-            $icon.text('-');
-            $childRow.removeClass('d-none');
-            const $container = $(`#container_${rowId}`);
+            $('#configSection').addClass('d-none');
+            $('#resultSection').removeClass('d-none');
+            $('#btnReset').removeClass('d-none');
 
-            // If already rendered, just show
-            if ($container.children().length > 0) return;
+            // Start at root
+            loadLevelView(0);
+        });
 
-            // Render next level
-            if (level < config.levels.length) {
-                renderNextLevel($container, $row.data('key'), level);
+        // --- 3. Core Engine: Load Level ---
+        function loadLevelView(levelIndex) {
+            currentLevel = levelIndex;
+            sortState = { col: null, dir: 'asc' }; // Reset sort on level change
+
+            // 1. Filter Raw Data based on breadcrumb history
+            let filteredData = rawData;
+            filterStack.forEach(f => {
+                filteredData = filteredData.filter(row => row[f.col] == f.val);
+            });
+
+            // 2. Decide: Aggregation or Detail View?
+            if (currentLevel < config.levels.length) {
+                // Aggregation Mode
+                const groupCol = config.levels[currentLevel];
+                currentTableData = aggregateData(filteredData, groupCol);
+                renderTable(currentTableData, groupCol, false);
             } else {
-                // This was the last grouping level, show details
-                const filters = getFiltersFromRow($row);
-                renderDetailTable($container, filters);
+                // Detail Mode (Last Level reached)
+                currentTableData = filteredData;
+                renderTable(currentTableData, null, true);
             }
-        });
-    }
 
-    // Helper to get all parent keys
-    function getFiltersFromRow($row) {
-        const filters = {};
-        const currentLevel = parseInt($row.data('level'));
-        
-        // Add current row's key
-        const colName = config.levels[currentLevel - 1];
-        filters[colName] = $row.data('key');
-
-        // Traverse up DOM to find parent rows
-        let $parentRow = $row.closest('table').closest('tr').prev('.clickable-row');
-        while ($parentRow.length) {
-             const pLevel = parseInt($parentRow.data('level'));
-             const pCol = config.levels[pLevel - 1];
-             filters[pCol] = $parentRow.data('key');
-             // Move up
-             $parentRow = $parentRow.closest('table').closest('tr').prev('.clickable-row');
+            updateBreadcrumbs();
         }
-        return filters;
-    }
 
-    function renderNextLevel($container, parentKey, parentLevelIdx) {
-        const currentLevelIdx = parentLevelIdx + 1;
-        const parentCol = config.levels[parentLevelIdx - 1];
-        
-        // Filter data by parent key
-        const filteredData = rawData.filter(d => d[parentCol] == parentKey);
-        
-        const targetCol = config.levels[currentLevelIdx - 1];
-        
-        // Group by Level n column
-        const aggData = aggregateData(filteredData, [targetCol], config.valueCols);
+        // Aggregation Logic
+        function aggregateData(dataset, groupKey) {
+            const groups = {};
+            dataset.forEach(row => {
+                const val = row[groupKey];
+                if (!groups[val]) {
+                    groups[val] = { [groupKey]: val, _count: 0 };
+                    // Init sums
+                    config.valueCols.forEach(vc => groups[val][vc] = 0);
+                }
+                groups[val]._count++;
+                // Sum
+                config.valueCols.forEach(vc => {
+                    groups[val][vc] += parseNum(row[vc]);
+                });
+            });
+            return Object.values(groups);
+        }
 
-        let html = `<table class="table table-sm table-bordered mb-0" style="background: white;">`;
-        
-        // Header
-        html += `<thead class="table-light"><tr><th style="width:40px"></th><th>${targetCol}</th>`;
-        config.valueCols.forEach(vc => html += `<th>${vc}</th>`);
-        html += `</tr></thead><tbody>`;
+        function parseNum(val) {
+            if (!val || val === '-') return 0;
+            if (typeof val === 'number') return val;
+            return parseFloat(val.toString().replace(/,/g, '')) || 0;
+        }
 
-        aggData.forEach((row, i) => {
-            const uniqueId = `l${currentLevelIdx}_${parentKey.replace(/[\s\W]/g,'')}_${i}`;
-            html += `
-                <tr class="clickable-row" data-id="${uniqueId}" data-level="${currentLevelIdx}" data-key="${row[targetCol]}">
-                    <td><span class="level-indicator">+</span></td>
-                    <td>${row[targetCol]}</td>
-                    ${config.valueCols.map(vc => `<td>${row[vc].toLocaleString()}</td>`).join('')}
-                </tr>
-                <tr id="child_${uniqueId}" class="d-none nested-row">
-                    <td colspan="${2 + config.valueCols.length}" class="p-3">
-                        <div id="container_${uniqueId}"></div>
-                    </td>
-                </tr>
-            `;
-        });
-        html += `</tbody></table>`;
-        
-        $container.html(html);
-        bindClickEvents();
-    }
+        // --- 4. Render Table ---
+        function renderTable(data, groupCol, isDetail) {
+            const $thead = $('#mainTable thead');
+            const $tbody = $('#mainTable tbody');
+            $thead.empty();
+            $tbody.empty();
 
-    function renderDetailTable($container, filters) {
-        // Filter raw data strictly
-        const details = rawData.filter(row => {
-            for (let k in filters) {
-                if (row[k] != filters[k]) return false;
+            // Determine Columns to show
+            let displayCols = [];
+            if (isDetail) {
+                displayCols = headers; // Show all cols in detail
+            } else {
+                displayCols = [groupCol, ...config.valueCols];
             }
-            return true;
-        });
 
-        let html = `<h6>Details (${details.length} records)</h6>`;
-        html += `<table class="table table-striped table-sm text-muted" style="font-size:0.9em"><thead><tr>`;
-        
-        headers.forEach(h => html += `<th>${h}</th>`);
-        html += `</tr></thead><tbody>`;
+            // Render Header
+            let headHtml = '<tr>';
+            displayCols.forEach(col => {
+                headHtml += `<th data-col="${col}">${col} <span class="sort-icon">⇅</span></th>`;
+            });
+            headHtml += '</tr>';
+            $thead.html(headHtml);
 
-        details.forEach(row => {
-            html += `<tr>`;
-            headers.forEach(h => html += `<td>${row[h]}</td>`);
-            html += `</tr>`;
-        });
+            // Render Body
+            renderTableBody(data, displayCols, isDetail);
 
-        html += `</tbody></table>`;
-        $container.html(html);
-    }
-</script>
+            // Bind Sort Events
+            $thead.find('th').click(function () {
+                const col = $(this).data('col');
+                handleSort(col, displayCols, isDetail);
+            });
+        }
+
+        function renderTableBody(data, displayCols, isDetail) {
+            const $tbody = $('#mainTable tbody');
+            $tbody.empty();
+
+            data.forEach(row => {
+                let tr = `<tr class="${!isDetail ? 'clickable-row' : ''}">`;
+
+                displayCols.forEach((col, idx) => {
+                    // If it's a detail view, just show text. 
+                    // If Agg view, format numbers for metric cols
+                    let val = row[col];
+                    if (!isDetail && config.valueCols.includes(col)) {
+                        val = val.toLocaleString();
+                    }
+
+                    // First column gets special styling via CSS, no logic needed here
+                    tr += `<td>${val === undefined || val === null ? '-' : val}</td>`;
+                });
+                tr += '</tr>';
+
+                const $tr = $(tr);
+
+                // Bind Drill-down Click
+                if (!isDetail) {
+                    $tr.click(function () {
+                        const groupVal = row[displayCols[0]]; // First col is always group key
+                        // Push to stack
+                        filterStack.push({ col: displayCols[0], val: groupVal });
+                        loadLevelView(currentLevel + 1);
+                    });
+                }
+
+                $tbody.append($tr);
+            });
+        }
+
+        // --- 5. Sorting Logic ---
+        function handleSort(col, displayCols, isDetail) {
+            // Toggle direction
+            if (sortState.col === col) {
+                sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortState.col = col;
+                sortState.dir = 'asc';
+            }
+
+            // Update Icons
+            $('th .sort-icon').text('⇅').removeClass('sort-active');
+            const arrow = sortState.dir === 'asc' ? '↑' : '↓';
+            $(`th[data-col="${col}"] .sort-icon`).text(arrow).addClass('sort-active');
+
+            // Sort Data
+            currentTableData.sort((a, b) => {
+                let valA = a[col];
+                let valB = b[col];
+
+                // Normalize for comparison
+                let numA = parseNum(valA);
+                let numB = parseNum(valB);
+
+                // If both look like numbers, compare numerically
+                // (Note: In detail view, everything is raw string likely, but we try parse)
+                let isNum = !isNaN(parseFloat(valA)) && !isNaN(parseFloat(valB));
+                if (config.valueCols.includes(col) || isNum) {
+                    return sortState.dir === 'asc' ? numA - numB : numB - numA;
+                } else {
+                    // String compare
+                    valA = valA ? valA.toString().toLowerCase() : '';
+                    valB = valB ? valB.toString().toLowerCase() : '';
+                    if (valA < valB) return sortState.dir === 'asc' ? -1 : 1;
+                    if (valA > valB) return sortState.dir === 'asc' ? 1 : -1;
+                    return 0;
+                }
+            });
+
+            renderTableBody(currentTableData, displayCols, isDetail);
+        }
+
+        // --- 6. Breadcrumb Logic ---
+        function updateBreadcrumbs() {
+            const $ul = $('#breadcrumbList');
+            $ul.empty();
+
+            // Home Link
+            $ul.append(`<li class="breadcrumb-item"><a href="#" onclick="resetToRoot()">Home</a></li>`);
+
+            // Intermediate Links
+            filterStack.forEach((filter, idx) => {
+                if (idx === filterStack.length - 1 && currentLevel > filterStack.length) {
+                    // Last item acts as active text if we are at detail view of it?
+                    // Actually, simplest is: make all crumbs clickable to roll back state
+                }
+
+                $ul.append(`
+                <li class="breadcrumb-item">
+                    <a href="#" onclick="rollbackTo(${idx})">${filter.val}</a>
+                </li>
+            `);
+            });
+
+            // Current View Indicator
+            let label = "Level " + (currentLevel + 1);
+            if (currentLevel >= config.levels.length) label = "Details";
+            $ul.append(`<li class="breadcrumb-item active">${label}</li>`);
+        }
+
+        // Global scope for HTML onclick
+        window.resetToRoot = function () {
+            filterStack = [];
+            loadLevelView(0);
+        };
+
+        window.rollbackTo = function (stackIndex) {
+            // If I click the 1st item (index 0), I want to keep that filter active
+            // and show the NEXT level.
+            // So filterStack should be sliced to include 0..stackIndex
+            filterStack = filterStack.slice(0, stackIndex + 1);
+            loadLevelView(stackIndex + 1);
+        };
+
+    </script>
 
 </body>
+
 </html>
