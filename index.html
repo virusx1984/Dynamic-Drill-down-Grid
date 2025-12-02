@@ -142,7 +142,7 @@
 
 <body class="bg-light">
 
-    <div class="container-fluid my-4 bg-white p-4 shadow-sm rounded" style = "width: 95%; margin: 0 auto;">
+    <div class="container-fluid my-4 bg-white p-4 shadow-sm rounded" style="width: 95%; margin: 0 auto;">
 
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h3 class="mb-0">Dynamic Drill-down Grid</h3>
@@ -150,8 +150,10 @@
         </div>
 
         <div id="uploadSection" class="card mb-4">
-            <div class="card-header bg-primary text-white">1. Upload JSON Data</div>
+            <div class="card-header bg-primary text-white">1. Upload Typed JSON Data</div>
             <div class="card-body">
+                <p class="small text-muted mb-2">JSON must include <code>"types"</code> (category/aggregation) and
+                    <code>"data"</code>.</p>
                 <input type="file" id="fileInput" class="form-control" accept=".json">
             </div>
         </div>
@@ -169,10 +171,12 @@
                         </select>
                     </div>
                 </div>
+
                 <div id="groupColsContainer" class="row mb-4 p-3 bg-light border rounded mx-1"></div>
+
                 <div class="mb-3">
                     <label class="form-label fw-bold">Select Metric Columns (Sum):</label>
-                    <div class="text-muted small mb-2">Note: Grouping columns are automatically excluded.</div>
+                    <div class="text-muted small mb-2">Only 'aggregation' type columns are shown here.</div>
                     <div id="valueColsContainer" class="d-flex flex-wrap gap-3 border p-3 rounded"></div>
                 </div>
                 <button id="btnGenerate" class="btn btn-primary w-100 btn-lg">Load Grid</button>
@@ -205,25 +209,36 @@
     <script>
         let rawData = [];
         let headers = [];
+        let columnTypes = {}; // Store types here
         let config = { levels: [], valueCols: [] };
         let currentLevel = 0;
         let filterStack = [];
         let currentTableData = [];
         let sortState = { col: null, dir: 'asc' };
 
+        // --- 1. Upload & Parse Typed JSON ---
         $('#fileInput').on('change', function (e) {
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
             reader.onload = function (event) {
                 try {
-                    rawData = JSON.parse(event.target.result);
-                    if (rawData.length > 0) {
+                    const json = JSON.parse(event.target.result);
+
+                    // Validate Format
+                    if (json.data && Array.isArray(json.data) && json.types) {
+                        rawData = json.data;
+                        columnTypes = json.types;
                         headers = Object.keys(rawData[0]);
                         initConfigurationUI();
                         $('#uploadSection').addClass('d-none');
+                    } else {
+                        alert('Invalid JSON Format! Must contain "types" and "data" keys.');
                     }
-                } catch (err) { alert('Invalid JSON'); }
+                } catch (err) {
+                    console.error(err);
+                    alert('Invalid JSON file.');
+                }
             };
             reader.readAsText(file);
         });
@@ -237,30 +252,38 @@
         }
 
         $('#levelCount').on('change', renderGroupSelectors);
-        $(document).on('change', '.level-select', updateMetricAvailability);
+
+        // --- 2. Render Selectors (Filtered by Type) ---
 
         function renderGroupSelectors() {
             const count = parseInt($('#levelCount').val());
             const container = $('#groupColsContainer');
             container.empty();
+
+            // Filter: Only Category columns
+            const categoryCols = headers.filter(h => columnTypes[h] === 'category');
+
             for (let i = 1; i <= count; i++) {
                 container.append(`
                 <div class="col-md-4 mb-3">
                     <label class="form-label text-primary">Level ${i} Group By:</label>
                     <select class="form-select level-select">
-                        <option value="">-- Choose Column --</option>
-                        ${headers.map(h => `<option value="${h}">${h}</option>`).join('')}
+                        <option value="">-- Choose Category --</option>
+                        ${categoryCols.map(h => `<option value="${h}">${h}</option>`).join('')}
                     </select>
                 </div>
             `);
             }
-            updateMetricAvailability();
         }
 
         function renderValueSelectors() {
             const container = $('#valueColsContainer');
             container.empty();
-            headers.forEach(h => {
+
+            // Filter: Only Aggregation columns
+            const aggCols = headers.filter(h => columnTypes[h] === 'aggregation');
+
+            aggCols.forEach(h => {
                 container.append(`
                 <div class="form-check metric-item">
                     <input class="form-check-input val-col-check" type="checkbox" value="${h}" id="chk_${h}" checked>
@@ -268,28 +291,13 @@
                 </div>
             `);
             });
-            updateMetricAvailability();
         }
 
-        function updateMetricAvailability() {
-            const selectedGroups = [];
-            $('.level-select').each(function () { if ($(this).val()) selectedGroups.push($(this).val()); });
-            $('.val-col-check').each(function () {
-                const val = $(this).val();
-                const isGroup = selectedGroups.includes(val);
-                $(this).prop('disabled', isGroup);
-                if (isGroup) {
-                    $(this).prop('checked', false);
-                    $(this).next().addClass('text-muted text-decoration-line-through');
-                } else {
-                    $(this).next().removeClass('text-muted text-decoration-line-through');
-                }
-            });
-        }
-
+        // --- 3. Generate Grid ---
         $('#btnGenerate').on('click', function () {
             config.levels = [];
             $('.level-select').each(function () { if ($(this).val()) config.levels.push($(this).val()); });
+
             config.valueCols = [];
             $('.val-col-check:checked').each(function () { config.valueCols.push($(this).val()); });
 
@@ -356,15 +364,18 @@
 
             let displayCols = [];
             if (isDetail) {
+                // Show all cols: First categories (non-value), then values
                 const nonValueCols = headers.filter(h => !config.valueCols.includes(h));
                 displayCols = [...nonValueCols, ...config.valueCols];
             } else {
                 displayCols = [groupCol, ...config.valueCols];
             }
 
+            // Logic: Freeze categories in details, Freeze group col in Agg view
             let stickyColIndices = [];
             if (isDetail) {
                 displayCols.forEach((col, idx) => {
+                    // If it's NOT an aggregation column, it must be frozen
                     if (!config.valueCols.includes(col)) stickyColIndices.push(idx);
                 });
             } else {
@@ -374,7 +385,7 @@
             let headHtml = '<tr>';
             displayCols.forEach((col, idx) => {
                 const isSticky = stickyColIndices.includes(idx);
-                const isValue = config.valueCols.includes(col);
+                const isValue = config.valueCols.includes(col); // Check if it is a metric
                 const stickyClass = isSticky ? 'sticky-col' : '';
                 const alignClass = isValue ? 'text-end' : 'text-start';
 
@@ -409,6 +420,7 @@
                 $tbody.append($tr);
             });
 
+            // Totals
             let totals = {};
             config.valueCols.forEach(c => totals[c] = 0);
             data.forEach(row => {
@@ -478,12 +490,8 @@
                 }
             });
 
-            // FIX: Determine correct groupCol for re-render
             let groupCol = null;
-            if (!isDetail) {
-                groupCol = config.levels[currentLevel];
-            }
-
+            if (!isDetail) groupCol = config.levels[currentLevel];
             renderTable(currentTableData, groupCol, isDetail);
         }
 
@@ -504,7 +512,6 @@
             filterStack = filterStack.slice(0, stackIndex + 1);
             loadLevelView(stackIndex + 1);
         };
-
     </script>
 </body>
 
