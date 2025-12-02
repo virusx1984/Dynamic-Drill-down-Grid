@@ -232,6 +232,7 @@
                         headers = Object.keys(rawData[0]);
                         initConfigurationUI();
                         $('#uploadSection').addClass('d-none');
+                        $('#btnReset').removeClass('d-none');
                     } else {
                         alert('Invalid JSON Format! Must contain "types" and "data" keys.');
                     }
