@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,14 +16,28 @@
             scrollbar-width: thin;
             scrollbar-color: #adb5bd #f1f1f1;
         }
-        .table-container::-webkit-scrollbar { width: 8px; height: 8px; }
-        .table-container::-webkit-scrollbar-track { background: #f1f1f1; }
-        .table-container::-webkit-scrollbar-thumb { background: #adb5bd; border-radius: 4px; }
-        .table-container::-webkit-scrollbar-thumb:hover { background: #6c757d; }
+
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background: #adb5bd;
+            border-radius: 4px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #6c757d;
+        }
 
         /* --- Table Layout --- */
         #mainTable {
-            border-collapse: separate; 
+            border-collapse: separate;
             border-spacing: 0;
             width: 100%;
             margin-bottom: 0;
@@ -30,7 +45,8 @@
         }
 
         /* --- Borders & No Wrap --- */
-        #mainTable th, #mainTable td {
+        #mainTable th,
+        #mainTable td {
             white-space: nowrap;
             padding: 0.3rem 0.5rem;
             vertical-align: middle;
@@ -38,8 +54,15 @@
             border-top: none !important;
             border-left: none !important;
         }
-        #mainTable thead th { border-top: 1px solid #dee2e6 !important; }
-        #mainTable tbody td:first-child, #mainTable thead th:first-child { border-left: 1px solid #dee2e6 !important; }
+
+        #mainTable thead th {
+            border-top: 1px solid #dee2e6 !important;
+        }
+
+        #mainTable tbody td:first-child,
+        #mainTable thead th:first-child {
+            border-left: 1px solid #dee2e6 !important;
+        }
 
         /* --- Sticky Logic --- */
         #mainTable thead th {
@@ -52,7 +75,10 @@
             user-select: none;
             box-shadow: none !important;
         }
-        #mainTable thead th:hover { background-color: #343a40; }
+
+        #mainTable thead th:hover {
+            background-color: #343a40;
+        }
 
         .sticky-col {
             position: sticky;
@@ -61,17 +87,45 @@
             box-shadow: none !important;
         }
 
-        thead th.sticky-col { z-index: 30 !important; background-color: #212529; color: white; }
-        tfoot th.sticky-col, tfoot td.sticky-col { z-index: 30 !important; background-color: #e9ecef; bottom: 0; }
+        thead th.sticky-col {
+            z-index: 30 !important;
+            background-color: #212529;
+            color: white;
+        }
+
+        tfoot th.sticky-col,
+        tfoot td.sticky-col {
+            z-index: 30 !important;
+            background-color: #e9ecef;
+            bottom: 0;
+        }
 
         /* Row Hover */
-        .clickable-row { cursor: pointer; }
-        .clickable-row:hover td { background-color: #e2e6ea; }
-        .clickable-row:hover td.sticky-col { background-color: #dbe2e8; }
+        .clickable-row {
+            cursor: pointer;
+        }
 
-        .sort-icon { font-size: 0.8em; margin-left: 5px; color: #6c757d; }
-        .sort-active { color: #fff; }
-        .metric-item { min-width: 120px; }
+        .clickable-row:hover td {
+            background-color: #e2e6ea;
+        }
+
+        .clickable-row:hover td.sticky-col {
+            background-color: #dbe2e8;
+        }
+
+        .sort-icon {
+            font-size: 0.8em;
+            margin-left: 5px;
+            color: #6c757d;
+        }
+
+        .sort-active {
+            color: #fff;
+        }
+
+        .metric-item {
+            min-width: 120px;
+        }
 
         /* Total Row */
         tfoot {
@@ -85,148 +139,158 @@
         }
     </style>
 </head>
+
 <body class="bg-light">
 
-<div class="container-fluid my-4 bg-white p-4 shadow-sm rounded" style="width: 95%; margin: 0 auto;">
-    
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="mb-0">Dynamic Drill-down Grid</h3>
-        <button id="btnReset" class="btn btn-outline-secondary btn-sm d-none">Reset Configuration</button>
-    </div>
-    
-    <div id="uploadSection" class="card mb-4">
-        <div class="card-header bg-primary text-white">1. Upload Ultra Compact JSON</div>
-        <div class="card-body">
-            <p class="small text-muted mb-2">JSON must include <code>"columns"</code>, <code>"col_types"</code> (array) and <code>"data"</code> (array of arrays).</p>
-            <input type="file" id="fileInput" class="form-control" accept=".json">
-        </div>
-    </div>
+    <div class="container-fluid my-4 bg-white p-4 shadow-sm rounded" style="width: 95%; margin: 0 auto;">
 
-    <div id="configSection" class="card mb-4 d-none">
-        <div class="card-header bg-secondary text-white">2. Configuration</div>
-        <div class="card-body">
-            <div class="row mb-3">
-                <div class="col-md-4">
-                    <label class="form-label fw-bold">How many aggregation levels?</label>
-                    <select id="levelCount" class="form-select">
-                        <option value="1">1 Level</option>
-                        <option value="2" selected>2 Levels</option>
-                        <option value="3">3 Levels</option>
-                    </select>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="mb-0">Dynamic Drill-down Grid</h3>
+            <button id="btnReset" class="btn btn-outline-secondary btn-sm d-none">Reset Configuration</button>
+        </div>
+
+        <div id="uploadSection" class="card mb-4">
+            <div class="card-header bg-primary text-white">1. Upload Ultra Compact JSON</div>
+            <div class="card-body">
+                <p class="small text-muted mb-2">JSON must include <code>"columns"</code>, <code>"col_types"</code>
+                    (array) and <code>"data"</code> (array of arrays).</p>
+                <input type="file" id="fileInput" class="form-control" accept=".json">
+            </div>
+        </div>
+
+        <div id="configSection" class="card mb-4 d-none">
+            <div class="card-header bg-secondary text-white">2. Configuration</div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">How many aggregation levels?</label>
+                        <select id="levelCount" class="form-select">
+                            <option value="1">1 Level</option>
+                            <option value="2" selected>2 Levels</option>
+                            <option value="3">3 Levels</option>
+                        </select>
+                    </div>
                 </div>
+
+                <div id="groupColsContainer" class="row mb-4 p-3 bg-light border rounded mx-1"></div>
+
+                <div class="mb-3">
+                    <div class="row align-items-end mb-2">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold mb-1">Select Metric Columns (Sum):</label>
+                            <div class="text-muted small mb-2">Only 'aggregation' type columns are shown here.</div>
+                            <input type="text" id="metricFilter" class="form-control form-control-sm"
+                                placeholder="Filter columns (Text or Regex supported)...">
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <button type="button" class="btn btn-sm btn-outline-primary me-1" id="btnSelectAll">Select
+                                Visible</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnUnselectAll">Unselect
+                                Visible</button>
+                        </div>
+                    </div>
+
+                    <div id="valueColsContainer" class="d-flex flex-wrap gap-3 border p-3 rounded"
+                        style="max-height: 200px; overflow-y: auto;"></div>
+                </div>
+                <button id="btnGenerate" class="btn btn-primary w-100 btn-lg">Load Grid</button>
             </div>
-            
-            <div id="groupColsContainer" class="row mb-4 p-3 bg-light border rounded mx-1"></div>
-            
-            <div class="mb-3">
-                <label class="form-label fw-bold">Select Metric Columns (Sum):</label>
-                <div class="text-muted small mb-2">Only 'aggregation' type columns are shown here.</div>
-                <div id="valueColsContainer" class="d-flex flex-wrap gap-3 border p-3 rounded"></div>
+        </div>
+
+        <div id="resultSection" class="d-none">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb bg-light p-2 rounded border" id="breadcrumbList">
+                    <li class="breadcrumb-item active">Home</li>
+                </ol>
+            </nav>
+
+            <div class="table-container">
+                <table class="table table-sm mb-0" id="mainTable">
+                    <thead></thead>
+                    <tbody></tbody>
+                    <tfoot></tfoot>
+                </table>
             </div>
-            <button id="btnGenerate" class="btn btn-primary w-100 btn-lg">Load Grid</button>
+            <div class="mt-2 text-muted small">
+                Tip: Click headers to sort. Click rows to drill down.
+            </div>
         </div>
     </div>
 
-    <div id="resultSection" class="d-none">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb bg-light p-2 rounded border" id="breadcrumbList">
-                <li class="breadcrumb-item active">Home</li>
-            </ol>
-        </nav>
+    <script src="js/jquery-3.6.0.min.js"></script>
+    <script src="js/bootstrap.bundle.min.js"></script>
 
-        <div class="table-container">
-            <table class="table table-sm mb-0" id="mainTable">
-                <thead></thead>
-                <tbody></tbody>
-                <tfoot></tfoot>
-            </table>
-        </div>
-        <div class="mt-2 text-muted small">
-            Tip: Click headers to sort. Click rows to drill down.
-        </div>
-    </div>
-</div>
+    <script>
+        let rawData = [];
+        let headers = [];
+        let colMap = {};
+        let columnTypes = {};
+        let config = { levels: [], valueCols: [] };
+        let currentLevel = 0;
+        let filterStack = [];
+        let currentTableData = [];
+        let sortState = { col: null, dir: 'asc' };
 
-<script src="js/jquery-3.6.0.min.js"></script>
-<script src="js/bootstrap.bundle.min.js"></script>
+        // --- 1. Upload & Parse Ultra Compact JSON ---
+        $('#fileInput').on('change', function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                try {
+                    const json = JSON.parse(event.target.result);
 
-<script>
-    let rawData = [];       // Array of Arrays
-    let headers = [];       // Array of strings
-    let colMap = {};        // Map colName -> index
-    let columnTypes = {};   // Map colName -> type (rebuilt from array)
-    let config = { levels: [], valueCols: [] };
-    let currentLevel = 0;   
-    let filterStack = [];   
-    let currentTableData = []; 
-    let sortState = { col: null, dir: 'asc' }; 
+                    if (json.columns && Array.isArray(json.columns) &&
+                        json.col_types && Array.isArray(json.col_types) &&
+                        json.data && Array.isArray(json.data)) {
 
-    // --- 1. Upload & Parse Ultra Compact JSON ---
-    $('#fileInput').on('change', function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            try {
-                const json = JSON.parse(event.target.result);
-                
-                // Validate Ultra Compact Format
-                // Expecting: columns (arr), col_types (arr), data (arr of arr)
-                if (json.columns && Array.isArray(json.columns) && 
-                    json.col_types && Array.isArray(json.col_types) &&
-                    json.data && Array.isArray(json.data)) {
-                    
-                    if (json.columns.length !== json.col_types.length) {
-                        alert('Error: "columns" and "col_types" length mismatch.');
-                        return;
+                        if (json.columns.length !== json.col_types.length) {
+                            alert('Error: "columns" and "col_types" length mismatch.');
+                            return;
+                        }
+
+                        headers = json.columns;
+                        rawData = json.data;
+                        colMap = {};
+                        headers.forEach((h, i) => colMap[h] = i);
+
+                        columnTypes = {};
+                        json.col_types.forEach((type, i) => {
+                            columnTypes[headers[i]] = type;
+                        });
+
+                        initConfigurationUI();
+                        $('#uploadSection').addClass('d-none');
+                        $('#btnReset').removeClass('d-none');
+                    } else {
+                        alert('Invalid JSON Format! Must contain "columns", "col_types", and "data" arrays.');
                     }
-
-                    headers = json.columns;
-                    rawData = json.data;
-
-                    // Build Index Map
-                    colMap = {};
-                    headers.forEach((h, i) => colMap[h] = i);
-
-                    // Rebuild Types Map for UI Logic
-                    columnTypes = {};
-                    json.col_types.forEach((type, i) => {
-                        columnTypes[headers[i]] = type;
-                    });
-
-                    initConfigurationUI();
-                    $('#uploadSection').addClass('d-none');
-                    $('#btnReset').removeClass('d-none'); // Show Reset Button
-                } else {
-                    alert('Invalid JSON Format! Must contain "columns", "col_types", and "data" arrays.');
+                } catch (err) {
+                    console.error(err);
+                    alert('Invalid JSON file.');
                 }
-            } catch (err) { 
-                console.error(err);
-                alert('Invalid JSON file.'); 
-            }
-        };
-        reader.readAsText(file);
-    });
+            };
+            reader.readAsText(file);
+        });
 
-    $('#btnReset').click(() => location.reload());
+        $('#btnReset').click(() => location.reload());
 
-    function initConfigurationUI() {
-        $('#configSection').removeClass('d-none');
-        renderGroupSelectors();
-        renderValueSelectors();
-    }
+        function initConfigurationUI() {
+            $('#configSection').removeClass('d-none');
+            renderGroupSelectors();
+            renderValueSelectors();
+        }
 
-    $('#levelCount').on('change', renderGroupSelectors);
+        $('#levelCount').on('change', renderGroupSelectors);
 
-    function renderGroupSelectors() {
-        const count = parseInt($('#levelCount').val());
-        const container = $('#groupColsContainer');
-        container.empty();
+        function renderGroupSelectors() {
+            const count = parseInt($('#levelCount').val());
+            const container = $('#groupColsContainer');
+            container.empty();
+            const categoryCols = headers.filter(h => columnTypes[h] === 'category');
 
-        const categoryCols = headers.filter(h => columnTypes[h] === 'category');
-
-        for (let i = 1; i <= count; i++) {
-            container.append(`
+            for (let i = 1; i <= count; i++) {
+                container.append(`
                 <div class="col-md-4 mb-3">
                     <label class="form-label text-primary">Level ${i} Group By:</label>
                     <select class="form-select level-select">
@@ -235,258 +299,304 @@
                     </select>
                 </div>
             `);
+            }
         }
-    }
 
-    function renderValueSelectors() {
-        const container = $('#valueColsContainer');
-        container.empty();
-        const aggCols = headers.filter(h => columnTypes[h] === 'aggregation');
+        function renderValueSelectors() {
+            const container = $('#valueColsContainer');
+            container.empty();
+            const aggCols = headers.filter(h => columnTypes[h] === 'aggregation');
 
-        aggCols.forEach(h => {
-            container.append(`
+            aggCols.forEach(h => {
+                container.append(`
                 <div class="form-check metric-item">
                     <input class="form-check-input val-col-check" type="checkbox" value="${h}" id="chk_${h}" checked>
                     <label class="form-check-label" for="chk_${h}">${h}</label>
                 </div>
             `);
-        });
-    }
+            });
 
-    // --- 3. Generate Grid ---
-    $('#btnGenerate').on('click', function() {
-        config.levels = [];
-        $('.level-select').each(function() { if($(this).val()) config.levels.push($(this).val()); });
-        config.valueCols = [];
-        $('.val-col-check:checked').each(function() { config.valueCols.push($(this).val()); });
-
-        if (config.levels.length === 0 || config.valueCols.length === 0) {
-            alert('Please select levels and metric columns.');
-            return;
+            bindMetricFilterEvents();
         }
 
-        $('#configSection').addClass('d-none');
-        $('#resultSection').removeClass('d-none');
-        loadLevelView(0);
-    });
+        function bindMetricFilterEvents() {
+            // Filter Logic (Text + Regex)
+            $('#metricFilter').off('input').on('input', function () {
+                const val = $(this).val().trim();
+                let regex = null;
 
-    function loadLevelView(levelIndex) {
-        currentLevel = levelIndex;
-        sortState = { col: null, dir: 'asc' }; 
+                // Try to compile regex, fallback to text match if invalid
+                if (val) {
+                    try {
+                        regex = new RegExp(val, 'i');
+                    } catch (e) {
+                        regex = null; // Invalid regex, will use simple includes
+                    }
+                }
 
-        let filteredData = rawData;
-        filterStack.forEach(f => {
-            const idx = colMap[f.col];
-            filteredData = filteredData.filter(row => row[idx] == f.val);
-        });
+                $('.metric-item').each(function () {
+                    const label = $(this).text();
+                    let isMatch = true;
 
-        if (currentLevel < config.levels.length) {
-            const groupCol = config.levels[currentLevel];
-            currentTableData = aggregateData(filteredData, groupCol);
-            renderTable(currentTableData, groupCol, false);
-        } else {
-            currentTableData = filteredData;
-            renderTable(currentTableData, null, true);
+                    if (val) {
+                        if (regex) {
+                            isMatch = regex.test(label);
+                        } else {
+                            isMatch = label.toLowerCase().includes(val.toLowerCase());
+                        }
+                    }
+
+                    if (isMatch) $(this).removeClass('d-none');
+                    else $(this).addClass('d-none');
+                });
+            });
+
+            // Select All Visible
+            $('#btnSelectAll').off('click').on('click', function () {
+                // Only select items that are visible and not disabled
+                $('.metric-item:not(.d-none) .val-col-check:not(:disabled)').prop('checked', true);
+            });
+
+            // Unselect All Visible
+            $('#btnUnselectAll').off('click').on('click', function () {
+                $('.metric-item:not(.d-none) .val-col-check:not(:disabled)').prop('checked', false);
+            });
         }
-        updateBreadcrumbs();
-    }
 
-    function aggregateData(dataset, groupKey) {
-        const groups = {};
-        const groupIdx = colMap[groupKey]; 
+        // --- 3. Generate Grid ---
+        $('#btnGenerate').on('click', function () {
+            config.levels = [];
+            $('.level-select').each(function () { if ($(this).val()) config.levels.push($(this).val()); });
+            config.valueCols = [];
+            $('.val-col-check:checked').each(function () { config.valueCols.push($(this).val()); });
 
-        dataset.forEach(row => {
-            const val = row[groupIdx];
-            if (!groups[val]) {
-                groups[val] = { [groupKey]: val };
-                config.valueCols.forEach(vc => groups[val][vc] = 0);
+            if (config.levels.length === 0 || config.valueCols.length === 0) {
+                alert('Please select levels and metric columns.');
+                return;
             }
-            
-            config.valueCols.forEach(vc => {
-                const colIdx = colMap[vc];
-                groups[val][vc] += parseNum(row[colIdx]);
-            });
+
+            $('#configSection').addClass('d-none');
+            $('#resultSection').removeClass('d-none');
+            loadLevelView(0);
         });
-        return Object.values(groups);
-    }
 
-    function parseNum(val) {
-        if (!val || val === '-') return 0;
-        if (typeof val === 'number') return val;
-        return parseFloat(val.toString().replace(/,/g, '')) || 0;
-    }
+        function loadLevelView(levelIndex) {
+            currentLevel = levelIndex;
+            sortState = { col: null, dir: 'asc' };
 
-    function renderTable(data, groupCol, isDetail) {
-        const $thead = $('#mainTable thead');
-        const $tbody = $('#mainTable tbody');
-        const $tfoot = $('#mainTable tfoot');
-        
-        $thead.empty();
-        $tbody.empty();
-        $tfoot.empty();
+            let filteredData = rawData;
+            filterStack.forEach(f => {
+                const idx = colMap[f.col];
+                filteredData = filteredData.filter(row => row[idx] == f.val);
+            });
 
-        let displayCols = [];
-        if (isDetail) {
-            const nonValueCols = headers.filter(h => !config.valueCols.includes(h));
-            displayCols = [...nonValueCols, ...config.valueCols];
-        } else {
-            displayCols = [groupCol, ...config.valueCols];
+            if (currentLevel < config.levels.length) {
+                const groupCol = config.levels[currentLevel];
+                currentTableData = aggregateData(filteredData, groupCol);
+                renderTable(currentTableData, groupCol, false);
+            } else {
+                currentTableData = filteredData;
+                renderTable(currentTableData, null, true);
+            }
+            updateBreadcrumbs();
         }
 
-        let stickyColIndices = [];
-        if (isDetail) {
-            displayCols.forEach((col, idx) => {
-                if (!config.valueCols.includes(col)) stickyColIndices.push(idx);
+        function aggregateData(dataset, groupKey) {
+            const groups = {};
+            const groupIdx = colMap[groupKey];
+
+            dataset.forEach(row => {
+                const val = row[groupIdx];
+                if (!groups[val]) {
+                    groups[val] = { [groupKey]: val };
+                    config.valueCols.forEach(vc => groups[val][vc] = 0);
+                }
+                config.valueCols.forEach(vc => {
+                    const colIdx = colMap[vc];
+                    groups[val][vc] += parseNum(row[colIdx]);
+                });
             });
-        } else {
-            stickyColIndices.push(0);
+            return Object.values(groups);
         }
 
-        let headHtml = '<tr>';
-        displayCols.forEach((col, idx) => {
-            const isSticky = stickyColIndices.includes(idx);
-            const isValue = config.valueCols.includes(col);
-            const stickyClass = isSticky ? 'sticky-col' : '';
-            const alignClass = isValue ? 'text-end' : 'text-start'; 
+        function parseNum(val) {
+            if (!val || val === '-') return 0;
+            if (typeof val === 'number') return val;
+            return parseFloat(val.toString().replace(/,/g, '')) || 0;
+        }
 
-            headHtml += `<th class="${stickyClass} ${alignClass}" data-idx="${idx}" data-col="${col}">${col} <span class="sort-icon">⇅</span></th>`;
-        });
-        headHtml += '</tr>';
-        $thead.html(headHtml);
+        function renderTable(data, groupCol, isDetail) {
+            const $thead = $('#mainTable thead');
+            const $tbody = $('#mainTable tbody');
+            const $tfoot = $('#mainTable tfoot');
 
-        data.forEach(row => {
-            let tr = `<tr class="${!isDetail ? 'clickable-row' : ''}">`;
+            $thead.empty();
+            $tbody.empty();
+            $tfoot.empty();
+
+            let displayCols = [];
+            if (isDetail) {
+                const nonValueCols = headers.filter(h => !config.valueCols.includes(h));
+                displayCols = [...nonValueCols, ...config.valueCols];
+            } else {
+                displayCols = [groupCol, ...config.valueCols];
+            }
+
+            let stickyColIndices = [];
+            if (isDetail) {
+                displayCols.forEach((col, idx) => {
+                    if (!config.valueCols.includes(col)) stickyColIndices.push(idx);
+                });
+            } else {
+                stickyColIndices.push(0);
+            }
+
+            let headHtml = '<tr>';
             displayCols.forEach((col, idx) => {
                 const isSticky = stickyColIndices.includes(idx);
                 const isValue = config.valueCols.includes(col);
                 const stickyClass = isSticky ? 'sticky-col' : '';
                 const alignClass = isValue ? 'text-end' : 'text-start';
-                
-                let val;
-                if (isDetail) val = row[colMap[col]]; // Array access
-                else val = row[col]; // Obj access (agg)
 
-                if (isValue) val = parseNum(val).toLocaleString();
-                
-                tr += `<td class="${stickyClass} ${alignClass}" data-idx="${idx}">${val === undefined || val === null ? '-' : val}</td>`;
+                headHtml += `<th class="${stickyClass} ${alignClass}" data-idx="${idx}" data-col="${col}">${col} <span class="sort-icon">⇅</span></th>`;
             });
-            tr += '</tr>';
-            const $tr = $(tr);
-            
-            if (!isDetail) {
-                $tr.click(function() {
-                    const groupVal = row[displayCols[0]]; 
-                    filterStack.push({ col: displayCols[0], val: groupVal });
-                    loadLevelView(currentLevel + 1);
+            headHtml += '</tr>';
+            $thead.html(headHtml);
+
+            data.forEach(row => {
+                let tr = `<tr class="${!isDetail ? 'clickable-row' : ''}">`;
+                displayCols.forEach((col, idx) => {
+                    const isSticky = stickyColIndices.includes(idx);
+                    const isValue = config.valueCols.includes(col);
+                    const stickyClass = isSticky ? 'sticky-col' : '';
+                    const alignClass = isValue ? 'text-end' : 'text-start';
+
+                    let val;
+                    if (isDetail) val = row[colMap[col]];
+                    else val = row[col];
+
+                    if (isValue) val = parseNum(val).toLocaleString();
+
+                    tr += `<td class="${stickyClass} ${alignClass}" data-idx="${idx}">${val === undefined || val === null ? '-' : val}</td>`;
                 });
-            }
-            $tbody.append($tr);
-        });
+                tr += '</tr>';
+                const $tr = $(tr);
 
-        // Totals
-        let totals = {};
-        config.valueCols.forEach(c => totals[c] = 0);
-        data.forEach(row => {
-            config.valueCols.forEach(c => {
-                let val;
-                if (isDetail) val = row[colMap[c]];
-                else val = row[c];
-                totals[c] += parseNum(val);
+                if (!isDetail) {
+                    $tr.click(function () {
+                        const groupVal = row[displayCols[0]];
+                        filterStack.push({ col: displayCols[0], val: groupVal });
+                        loadLevelView(currentLevel + 1);
+                    });
+                }
+                $tbody.append($tr);
             });
-        });
 
-        let footHtml = '<tr>';
-        displayCols.forEach((col, idx) => {
-            const isSticky = stickyColIndices.includes(idx);
-            const isValue = config.valueCols.includes(col);
-            const stickyClass = isSticky ? 'sticky-col' : '';
-            const alignClass = isValue ? 'text-end' : 'text-start';
+            // Totals
+            let totals = {};
+            config.valueCols.forEach(c => totals[c] = 0);
+            data.forEach(row => {
+                config.valueCols.forEach(c => {
+                    let val;
+                    if (isDetail) val = row[colMap[c]];
+                    else val = row[c];
+                    totals[c] += parseNum(val);
+                });
+            });
 
-            if (idx === 0) {
-                footHtml += `<td class="${stickyClass}" data-idx="${idx}">TOTAL</td>`;
-            } else if (isValue) {
-                footHtml += `<td class="${stickyClass} ${alignClass}" data-idx="${idx}">${totals[col].toLocaleString()}</td>`;
-            } else {
-                footHtml += `<td class="${stickyClass}" data-idx="${idx}"></td>`;
-            }
-        });
-        footHtml += '</tr>';
-        $tfoot.html(footHtml);
+            let footHtml = '<tr>';
+            displayCols.forEach((col, idx) => {
+                const isSticky = stickyColIndices.includes(idx);
+                const isValue = config.valueCols.includes(col);
+                const stickyClass = isSticky ? 'sticky-col' : '';
+                const alignClass = isValue ? 'text-end' : 'text-start';
 
-        let currentLeft = 0;
-        $thead.find('th').each(function(index) {
-            if ($(this).hasClass('sticky-col')) {
-                const width = $(this).outerWidth();
-                $(`#mainTable th[data-idx="${index}"], #mainTable td[data-idx="${index}"]`).css('left', currentLeft + 'px');
-                currentLeft += width; 
-            }
-        });
+                if (idx === 0) {
+                    footHtml += `<td class="${stickyClass}" data-idx="${idx}">TOTAL</td>`;
+                } else if (isValue) {
+                    footHtml += `<td class="${stickyClass} ${alignClass}" data-idx="${idx}">${totals[col].toLocaleString()}</td>`;
+                } else {
+                    footHtml += `<td class="${stickyClass}" data-idx="${idx}"></td>`;
+                }
+            });
+            footHtml += '</tr>';
+            $tfoot.html(footHtml);
 
-        $thead.find('th').click(function() {
-            const col = $(this).data('col');
-            handleSort(col, displayCols, isDetail);
-        });
-    }
+            let currentLeft = 0;
+            $thead.find('th').each(function (index) {
+                if ($(this).hasClass('sticky-col')) {
+                    const width = $(this).outerWidth();
+                    $(`#mainTable th[data-idx="${index}"], #mainTable td[data-idx="${index}"]`).css('left', currentLeft + 'px');
+                    currentLeft += width;
+                }
+            });
 
-    function handleSort(col, displayCols, isDetail) {
-        if (sortState.col === col) {
-            sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
-        } else {
-            sortState.col = col;
-            sortState.dir = 'asc';
+            $thead.find('th').click(function () {
+                const col = $(this).data('col');
+                handleSort(col, displayCols, isDetail);
+            });
         }
 
-        $('th .sort-icon').text('⇅').removeClass('sort-active');
-        const arrow = sortState.dir === 'asc' ? '↑' : '↓';
-        $(`th[data-col="${col}"] .sort-icon`).text(arrow).addClass('sort-active');
-
-        currentTableData.sort((a, b) => {
-            let valA, valB;
-            if (isDetail) {
-                valA = a[colMap[col]];
-                valB = b[colMap[col]];
+        function handleSort(col, displayCols, isDetail) {
+            if (sortState.col === col) {
+                sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
             } else {
-                valA = a[col];
-                valB = b[col];
+                sortState.col = col;
+                sortState.dir = 'asc';
             }
 
-            let numA = parseNum(valA);
-            let numB = parseNum(valB);
+            $('th .sort-icon').text('⇅').removeClass('sort-active');
+            const arrow = sortState.dir === 'asc' ? '↑' : '↓';
+            $(`th[data-col="${col}"] .sort-icon`).text(arrow).addClass('sort-active');
 
-            let isNum = !isNaN(parseFloat(valA)) && !isNaN(parseFloat(valB));
-            if (config.valueCols.includes(col) || isNum) {
-                return sortState.dir === 'asc' ? numA - numB : numB - numA;
-            } else {
-                valA = valA ? valA.toString().toLowerCase() : '';
-                valB = valB ? valB.toString().toLowerCase() : '';
-                if (valA < valB) return sortState.dir === 'asc' ? -1 : 1;
-                if (valA > valB) return sortState.dir === 'asc' ? 1 : -1;
-                return 0;
-            }
-        });
+            currentTableData.sort((a, b) => {
+                let valA, valB;
+                if (isDetail) {
+                    valA = a[colMap[col]];
+                    valB = b[colMap[col]];
+                } else {
+                    valA = a[col];
+                    valB = b[col];
+                }
 
-        let groupCol = null;
-        if (!isDetail) groupCol = config.levels[currentLevel];
-        renderTable(currentTableData, groupCol, isDetail);
-    }
+                let numA = parseNum(valA);
+                let numB = parseNum(valB);
 
-    function updateBreadcrumbs() {
-        const $ul = $('#breadcrumbList');
-        $ul.empty();
-        $ul.append(`<li class="breadcrumb-item"><a href="#" onclick="resetToRoot()">Home</a></li>`);
-        filterStack.forEach((filter, idx) => {
-            $ul.append(`<li class="breadcrumb-item"><a href="#" onclick="rollbackTo(${idx})">${filter.val}</a></li>`);
-        });
-        let label = "Level " + (currentLevel + 1);
-        if (currentLevel >= config.levels.length) label = "Details";
-        $ul.append(`<li class="breadcrumb-item active">${label}</li>`);
-    }
+                let isNum = !isNaN(parseFloat(valA)) && !isNaN(parseFloat(valB));
+                if (config.valueCols.includes(col) || isNum) {
+                    return sortState.dir === 'asc' ? numA - numB : numB - numA;
+                } else {
+                    valA = valA ? valA.toString().toLowerCase() : '';
+                    valB = valB ? valB.toString().toLowerCase() : '';
+                    if (valA < valB) return sortState.dir === 'asc' ? -1 : 1;
+                    if (valA > valB) return sortState.dir === 'asc' ? 1 : -1;
+                    return 0;
+                }
+            });
 
-    window.resetToRoot = function() { filterStack = []; loadLevelView(0); };
-    window.rollbackTo = function(stackIndex) {
-        filterStack = filterStack.slice(0, stackIndex + 1);
-        loadLevelView(stackIndex + 1);
-    };
-</script>
+            let groupCol = null;
+            if (!isDetail) groupCol = config.levels[currentLevel];
+            renderTable(currentTableData, groupCol, isDetail);
+        }
+
+        function updateBreadcrumbs() {
+            const $ul = $('#breadcrumbList');
+            $ul.empty();
+            $ul.append(`<li class="breadcrumb-item"><a href="#" onclick="resetToRoot()">Home</a></li>`);
+            filterStack.forEach((filter, idx) => {
+                $ul.append(`<li class="breadcrumb-item"><a href="#" onclick="rollbackTo(${idx})">${filter.val}</a></li>`);
+            });
+            let label = "Level " + (currentLevel + 1);
+            if (currentLevel >= config.levels.length) label = "Details";
+            $ul.append(`<li class="breadcrumb-item active">${label}</li>`);
+        }
+
+        window.resetToRoot = function () { filterStack = []; loadLevelView(0); };
+        window.rollbackTo = function (stackIndex) {
+            filterStack = filterStack.slice(0, stackIndex + 1);
+            loadLevelView(stackIndex + 1);
+        };
+    </script>
 </body>
+
 </html>
