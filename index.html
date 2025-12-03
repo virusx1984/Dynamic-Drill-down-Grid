@@ -231,7 +231,7 @@
         let currentTableData = [];
         let sortState = { col: null, dir: 'asc' };
 
-        // --- 1. Upload & Parse Ultra Compact JSON ---
+        // --- 1. Upload & Parse ---
         $('#fileInput').on('change', function (e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -320,50 +320,35 @@
         }
 
         function bindMetricFilterEvents() {
-            // Filter Logic (Text + Regex)
             $('#metricFilter').off('input').on('input', function () {
                 const val = $(this).val().trim();
                 let regex = null;
-
-                // Try to compile regex, fallback to text match if invalid
                 if (val) {
-                    try {
-                        regex = new RegExp(val, 'i');
-                    } catch (e) {
-                        regex = null; // Invalid regex, will use simple includes
-                    }
+                    try { regex = new RegExp(val, 'i'); } catch (e) { regex = null; }
                 }
 
                 $('.metric-item').each(function () {
                     const label = $(this).text();
                     let isMatch = true;
-
                     if (val) {
-                        if (regex) {
-                            isMatch = regex.test(label);
-                        } else {
-                            isMatch = label.toLowerCase().includes(val.toLowerCase());
-                        }
+                        if (regex) isMatch = regex.test(label);
+                        else isMatch = label.toLowerCase().includes(val.toLowerCase());
                     }
-
                     if (isMatch) $(this).removeClass('d-none');
                     else $(this).addClass('d-none');
                 });
             });
 
-            // Select All Visible
             $('#btnSelectAll').off('click').on('click', function () {
-                // Only select items that are visible and not disabled
                 $('.metric-item:not(.d-none) .val-col-check:not(:disabled)').prop('checked', true);
             });
 
-            // Unselect All Visible
             $('#btnUnselectAll').off('click').on('click', function () {
                 $('.metric-item:not(.d-none) .val-col-check:not(:disabled)').prop('checked', false);
             });
         }
 
-        // --- 3. Generate Grid ---
+        // --- 3. Generate ---
         $('#btnGenerate').on('click', function () {
             config.levels = [];
             $('.level-select').each(function () { if ($(this).val()) config.levels.push($(this).val()); });
@@ -436,8 +421,10 @@
 
             let displayCols = [];
             if (isDetail) {
-                const nonValueCols = headers.filter(h => !config.valueCols.includes(h));
-                displayCols = [...nonValueCols, ...config.valueCols];
+                // FIX: Only show Category Cols + Selected Value Cols
+                // This prevents unselected metrics from appearing and being frozen
+                const categoryCols = headers.filter(h => columnTypes[h] === 'category');
+                displayCols = [...categoryCols, ...config.valueCols];
             } else {
                 displayCols = [groupCol, ...config.valueCols];
             }
@@ -445,6 +432,7 @@
             let stickyColIndices = [];
             if (isDetail) {
                 displayCols.forEach((col, idx) => {
+                    // Freeze only Category columns (which are NOT in valueCols)
                     if (!config.valueCols.includes(col)) stickyColIndices.push(idx);
                 });
             } else {
