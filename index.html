@@ -68,16 +68,17 @@
         #mainTable thead th {
             position: sticky;
             top: 0;
-            background-color: #212529;
+            /* bg-color set by JS */
             color: white;
             z-index: 20;
             cursor: pointer;
             user-select: none;
             box-shadow: none !important;
+            transition: filter 0.2s;
         }
 
         #mainTable thead th:hover {
-            background-color: #343a40;
+            filter: brightness(1.2);
         }
 
         .sticky-col {
@@ -87,9 +88,9 @@
             box-shadow: none !important;
         }
 
+        /* Intersection handling */
         thead th.sticky-col {
             z-index: 30 !important;
-            background-color: #212529;
             color: white;
         }
 
@@ -116,15 +117,33 @@
         .sort-icon {
             font-size: 0.8em;
             margin-left: 5px;
-            color: #6c757d;
+            color: rgba(255, 255, 255, 0.7);
         }
 
         .sort-active {
             color: #fff;
         }
 
+        /* Metric Item Styles */
         .metric-item {
-            min-width: 120px;
+            min-width: 160px;
+            /* Wider to fit color picker */
+            background-color: #fff;
+            border: 1px solid #dee2e6;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        /* Color Select Styling */
+        .color-select {
+            width: 20px;
+            height: 20px;
+            padding: 0;
+            border: none;
+            cursor: pointer;
+            appearance: none;
+            /* Remove default arrow */
+            border-radius: 50%;
         }
 
         /* Total Row */
@@ -138,7 +157,6 @@
             border-top: 2px solid #adb5bd !important;
         }
 
-        /* --- Drag & Drop Zone Styles --- */
         .drop-zone {
             border: 2px dashed #dee2e6;
             border-radius: 5px;
@@ -210,7 +228,7 @@
                 <div class="mb-3">
                     <div class="row align-items-end mb-2">
                         <div class="col-md-6">
-                            <label class="form-label fw-bold mb-1">Select Metric Columns (Sum):</label>
+                            <label class="form-label fw-bold mb-1">Select Metric Columns (Sum) & Colors:</label>
                             <div class="text-muted small mb-2">Only 'aggregation' type columns are shown here.</div>
                             <input type="text" id="metricFilter" class="form-control form-control-sm"
                                 placeholder="Filter columns (Text or Regex supported)...">
@@ -223,8 +241,8 @@
                         </div>
                     </div>
 
-                    <div id="valueColsContainer" class="d-flex flex-wrap gap-3 border p-3 rounded"
-                        style="max-height: 200px; overflow-y: auto;"></div>
+                    <div id="valueColsContainer" class="d-flex flex-wrap gap-2 border p-3 rounded"
+                        style="max-height: 300px; overflow-y: auto;"></div>
                 </div>
                 <button id="btnGenerate" class="btn btn-primary w-100 btn-lg">Load Grid</button>
             </div>
@@ -264,70 +282,52 @@
         let headers = [];
         let colMap = {};
         let columnTypes = {};
-        let config = { levels: [], valueCols: [] };
+        let config = {
+            levels: [],
+            valueCols: [],
+            columnColors: {} // Store { colName: hexCode }
+        };
         let currentLevel = 0;
         let filterStack = [];
         let currentTableData = [];
         let sortState = { col: null, dir: 'asc' };
 
-        // --- 1. Drag & Drop + File Upload Logic ---
+        // Predefined colors for headers
+        const PREDEFINED_COLORS = [
+            { name: 'Black', val: '#212529' },
+            { name: 'Blue', val: '#0d6efd' },
+            { name: 'Green', val: '#198754' },
+            { name: 'Red', val: '#dc3545' },
+            { name: 'Orange', val: '#fd7e14' },
+            { name: 'Purple', val: '#6f42c1' }
+        ];
 
-        // Trigger file input when clicking drop zone
-        $('#dropZone').on('click', function () {
-            $('#fileInput').click();
-        });
+        // --- 1. File Processing ---
 
-        // Handle Drag Events
+        $('#dropZone').on('click', function () { $('#fileInput').click(); });
+
         const dropZone = document.getElementById('dropZone');
-
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             dropZone.addEventListener(eventName, preventDefaults, false);
         });
-
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
+        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
 
         ['dragenter', 'dragover'].forEach(eventName => {
-            dropZone.addEventListener(eventName, highlight, false);
+            dropZone.addEventListener(eventName, () => $('#dropZone').addClass('dragover'), false);
         });
-
         ['dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, unhighlight, false);
+            dropZone.addEventListener(eventName, () => $('#dropZone').removeClass('dragover'), false);
         });
 
-        function highlight(e) {
-            $('#dropZone').addClass('dragover');
-        }
+        dropZone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) processFile(files[0]);
+        }, false);
 
-        function unhighlight(e) {
-            $('#dropZone').removeClass('dragover');
-        }
-
-        // Handle Drop
-        dropZone.addEventListener('drop', handleDrop, false);
-
-        function handleDrop(e) {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            if (files.length > 0) {
-                processFile(files[0]);
-            }
-        }
-
-        // Handle Input Change
         $('#fileInput').on('change', function (e) {
-            const file = e.target.files[0];
-            if (file) {
-                processFile(file);
-            }
+            if (e.target.files[0]) processFile(e.target.files[0]);
         });
 
-        /**
-         * Reads and parses the JSON file.
-         * @param {File} file - The file object to read.
-         */
         function processFile(file) {
             const reader = new FileReader();
             reader.onload = function (event) {
@@ -371,7 +371,6 @@
 
         $('#btnReset').click(() => location.reload());
 
-        // NEW: Back to Config Button
         $('#btnBackToConfig').click(function () {
             $('#resultSection').addClass('d-none');
             $('#configSection').removeClass('d-none');
@@ -410,10 +409,22 @@
             const aggCols = headers.filter(h => columnTypes[h] === 'aggregation');
 
             aggCols.forEach(h => {
+                // Create Color Options
+                let colorOptions = PREDEFINED_COLORS.map(c =>
+                    `<option value="${c.val}" style="background-color:${c.val}; color:white;">${c.name}</option>`
+                ).join('');
+
                 container.append(`
-                <div class="form-check metric-item">
-                    <input class="form-check-input val-col-check" type="checkbox" value="${h}" id="chk_${h}" checked>
-                    <label class="form-check-label" for="chk_${h}">${h}</label>
+                <div class="metric-item d-flex align-items-center">
+                    <div class="form-check mb-0 me-2">
+                        <input class="form-check-input val-col-check" type="checkbox" value="${h}" id="chk_${h}" checked>
+                    </div>
+                    <select class="form-select form-select-sm p-0 ps-1 me-2 color-select" title="Header Color" 
+                            style="width: 24px; height: 24px; background-color: #212529; color: transparent;"
+                            onchange="this.style.backgroundColor=this.value">
+                        ${colorOptions}
+                    </select>
+                    <label class="form-check-label text-truncate" for="chk_${h}" title="${h}">${h}</label>
                 </div>
             `);
             });
@@ -430,14 +441,14 @@
                 }
 
                 $('.metric-item').each(function () {
-                    const label = $(this).text();
+                    const label = $(this).find('label').text();
                     let isMatch = true;
                     if (val) {
                         if (regex) isMatch = regex.test(label);
                         else isMatch = label.toLowerCase().includes(val.toLowerCase());
                     }
-                    if (isMatch) $(this).removeClass('d-none');
-                    else $(this).addClass('d-none');
+                    if (isMatch) $(this).removeClass('d-none').addClass('d-flex');
+                    else $(this).addClass('d-none').removeClass('d-flex');
                 });
             });
 
@@ -450,19 +461,29 @@
             });
         }
 
-        // --- 3. Grid Generation & Logic ---
+        // --- 3. Grid Generation ---
         $('#btnGenerate').on('click', function () {
             config.levels = [];
             $('.level-select').each(function () { if ($(this).val()) config.levels.push($(this).val()); });
+
             config.valueCols = [];
-            $('.val-col-check:checked').each(function () { config.valueCols.push($(this).val()); });
+            config.columnColors = {}; // Reset colors
+
+            // Iterate visible checkboxes to capture selection and color
+            $('.val-col-check:checked').each(function () {
+                const colName = $(this).val();
+                config.valueCols.push(colName);
+
+                // Find sibling color selector
+                const colorVal = $(this).closest('.metric-item').find('.color-select').val();
+                config.columnColors[colName] = colorVal;
+            });
 
             if (config.levels.length === 0 || config.valueCols.length === 0) {
                 alert('Please select levels and metric columns.');
                 return;
             }
 
-            // State Reset (Crucial for re-generation)
             filterStack = [];
             currentLevel = 0;
 
@@ -471,10 +492,6 @@
             loadLevelView(0);
         });
 
-        /**
-         * Loads the view for a specific drill-down level.
-         * @param {number} levelIndex - The 0-based index of the level (0 = Level 1).
-         */
         function loadLevelView(levelIndex) {
             currentLevel = levelIndex;
             sortState = { col: null, dir: 'asc' };
@@ -496,12 +513,6 @@
             updateBreadcrumbs();
         }
 
-        /**
-         * Aggregates data by a specific column.
-         * @param {Array} dataset - Array of data rows.
-         * @param {string} groupKey - Column name to group by.
-         * @returns {Array} Array of object rows with aggregated values.
-         */
         function aggregateData(dataset, groupKey) {
             const groups = {};
             const groupIdx = colMap[groupKey];
@@ -526,12 +537,6 @@
             return parseFloat(val.toString().replace(/,/g, '')) || 0;
         }
 
-        /**
-         * Renders the HTML table based on data and context.
-         * @param {Array} data - The dataset to render.
-         * @param {string|null} groupCol - The current grouping column (null if detail view).
-         * @param {boolean} isDetail - Whether rendering the detail view.
-         */
         function renderTable(data, groupCol, isDetail) {
             const $thead = $('#mainTable thead');
             const $tbody = $('#mainTable tbody');
@@ -543,23 +548,18 @@
 
             let displayCols = [];
             if (isDetail) {
-                // In detail view: Show Category Columns + Selected Value Columns
                 const categoryCols = headers.filter(h => columnTypes[h] === 'category');
                 displayCols = [...categoryCols, ...config.valueCols];
             } else {
-                // In Agg view: Show Group Column + Selected Value Columns
                 displayCols = [groupCol, ...config.valueCols];
             }
 
-            // Determine Sticky Columns
             let stickyColIndices = [];
             if (isDetail) {
-                // Freeze Category columns
                 displayCols.forEach((col, idx) => {
                     if (!config.valueCols.includes(col)) stickyColIndices.push(idx);
                 });
             } else {
-                // Freeze Group column (Index 0)
                 stickyColIndices.push(0);
             }
 
@@ -571,7 +571,15 @@
                 const stickyClass = isSticky ? 'sticky-col' : '';
                 const alignClass = isValue ? 'text-end' : 'text-start';
 
-                headHtml += `<th class="${stickyClass} ${alignClass}" data-idx="${idx}" data-col="${col}">${col} <span class="sort-icon">⇅</span></th>`;
+                // Get custom color if it's a value column, else default black
+                let bgStyle = '';
+                if (isValue && config.columnColors[col]) {
+                    bgStyle = `background-color: ${config.columnColors[col]} !important;`;
+                } else {
+                    bgStyle = `background-color: #212529 !important;`;
+                }
+
+                headHtml += `<th class="${stickyClass} ${alignClass}" style="${bgStyle}" data-idx="${idx}" data-col="${col}">${col} <span class="sort-icon">⇅</span></th>`;
             });
             headHtml += '</tr>';
             $thead.html(headHtml);
@@ -606,7 +614,7 @@
                 $tbody.append($tr);
             });
 
-            // Render Footer (Totals)
+            // Totals
             let totals = {};
             config.valueCols.forEach(c => totals[c] = 0);
             data.forEach(row => {
@@ -636,7 +644,6 @@
             footHtml += '</tr>';
             $tfoot.html(footHtml);
 
-            // Apply Sticky Offsets
             let currentLeft = 0;
             $thead.find('th').each(function (index) {
                 if ($(this).hasClass('sticky-col')) {
@@ -646,7 +653,6 @@
                 }
             });
 
-            // Bind Sort Event
             $thead.find('th').click(function () {
                 const col = $(this).data('col');
                 handleSort(col, displayCols, isDetail);
