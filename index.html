@@ -127,7 +127,6 @@
         /* Metric Item Styles */
         .metric-item {
             min-width: 160px;
-            /* Wider to fit color picker */
             background-color: #fff;
             border: 1px solid #dee2e6;
             padding: 4px 8px;
@@ -142,8 +141,12 @@
             border: none;
             cursor: pointer;
             appearance: none;
-            /* Remove default arrow */
             border-radius: 50%;
+        }
+
+        /* Batch Color Picker Style */
+        #batchColorSelect option {
+            color: white;
         }
 
         /* Total Row */
@@ -227,17 +230,30 @@
 
                 <div class="mb-3">
                     <div class="row align-items-end mb-2">
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold mb-1">Select Metric Columns (Sum) & Colors:</label>
+                        <div class="col-md-5">
+                            <label class="form-label fw-bold mb-1">Select Metric Columns (Sum):</label>
                             <div class="text-muted small mb-2">Only 'aggregation' type columns are shown here.</div>
                             <input type="text" id="metricFilter" class="form-control form-control-sm"
                                 placeholder="Filter columns (Text or Regex supported)...">
                         </div>
-                        <div class="col-md-6 text-end">
-                            <button type="button" class="btn btn-sm btn-outline-primary me-1" id="btnSelectAll">Select
-                                Visible</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnUnselectAll">Unselect
-                                Visible</button>
+
+                        <div class="col-md-7 text-end">
+                            <div class="d-flex justify-content-end align-items-center gap-2">
+                                <div class="input-group input-group-sm w-auto">
+                                    <select class="form-select" id="batchColorSelect"
+                                        style="max-width: 100px; background-color: #212529; color: white;">
+                                    </select>
+                                    <button class="btn btn-outline-secondary" type="button" id="btnBatchColor">Set
+                                        Color</button>
+                                </div>
+
+                                <div class="vr"></div>
+
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="btnSelectAll">Select
+                                    Visible</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                    id="btnUnselectAll">Unselect Visible</button>
+                            </div>
                         </div>
                     </div>
 
@@ -285,14 +301,14 @@
         let config = {
             levels: [],
             valueCols: [],
-            columnColors: {} // Store { colName: hexCode }
+            columnColors: {}
         };
         let currentLevel = 0;
         let filterStack = [];
         let currentTableData = [];
         let sortState = { col: null, dir: 'asc' };
 
-        // Predefined colors for headers
+        // Predefined colors
         const PREDEFINED_COLORS = [
             { name: 'Black', val: '#212529' },
             { name: 'Blue', val: '#0d6efd' },
@@ -308,9 +324,8 @@
 
         const dropZone = document.getElementById('dropZone');
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, preventDefaults, false);
+            dropZone.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
         });
-        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
 
         ['dragenter', 'dragover'].forEach(eventName => {
             dropZone.addEventListener(eventName, () => $('#dropZone').addClass('dragover'), false);
@@ -380,9 +395,23 @@
             $('#configSection').removeClass('d-none');
             renderGroupSelectors();
             renderValueSelectors();
+            initBatchColorPicker(); // NEW
         }
 
         $('#levelCount').on('change', renderGroupSelectors);
+
+        function initBatchColorPicker() {
+            const $select = $('#batchColorSelect');
+            $select.empty();
+            PREDEFINED_COLORS.forEach(c => {
+                $select.append(`<option value="${c.val}" style="background-color:${c.val};">${c.name}</option>`);
+            });
+
+            // Dynamic background update for the batch select itself
+            $select.on('change', function () {
+                $(this).css('background-color', $(this).val());
+            });
+        }
 
         function renderGroupSelectors() {
             const count = parseInt($('#levelCount').val());
@@ -409,7 +438,6 @@
             const aggCols = headers.filter(h => columnTypes[h] === 'aggregation');
 
             aggCols.forEach(h => {
-                // Create Color Options
                 let colorOptions = PREDEFINED_COLORS.map(c =>
                     `<option value="${c.val}" style="background-color:${c.val}; color:white;">${c.name}</option>`
                 ).join('');
@@ -452,12 +480,29 @@
                 });
             });
 
+            // Select All Visible
             $('#btnSelectAll').off('click').on('click', function () {
-                $('.metric-item:not(.d-none) .val-col-check:not(:disabled)').prop('checked', true);
+                $('.metric-item.d-flex .val-col-check:not(:disabled)').prop('checked', true);
             });
 
+            // Unselect All Visible
             $('#btnUnselectAll').off('click').on('click', function () {
-                $('.metric-item:not(.d-none) .val-col-check:not(:disabled)').prop('checked', false);
+                $('.metric-item.d-flex .val-col-check:not(:disabled)').prop('checked', false);
+            });
+
+            // NEW: Batch Set Color for Visible & Selected
+            $('#btnBatchColor').off('click').on('click', function () {
+                const selectedColor = $('#batchColorSelect').val();
+
+                // Iterate over items that are Visible AND Checked
+                $('.metric-item.d-flex .val-col-check:checked').each(function () {
+                    const $item = $(this).closest('.metric-item');
+                    const $colorSelect = $item.find('.color-select');
+
+                    // Update value and background color
+                    $colorSelect.val(selectedColor);
+                    $colorSelect.css('background-color', selectedColor);
+                });
             });
         }
 
@@ -467,14 +512,12 @@
             $('.level-select').each(function () { if ($(this).val()) config.levels.push($(this).val()); });
 
             config.valueCols = [];
-            config.columnColors = {}; // Reset colors
+            config.columnColors = {};
 
-            // Iterate visible checkboxes to capture selection and color
             $('.val-col-check:checked').each(function () {
                 const colName = $(this).val();
                 config.valueCols.push(colName);
 
-                // Find sibling color selector
                 const colorVal = $(this).closest('.metric-item').find('.color-select').val();
                 config.columnColors[colName] = colorVal;
             });
@@ -571,7 +614,6 @@
                 const stickyClass = isSticky ? 'sticky-col' : '';
                 const alignClass = isValue ? 'text-end' : 'text-start';
 
-                // Get custom color if it's a value column, else default black
                 let bgStyle = '';
                 if (isValue && config.columnColors[col]) {
                     bgStyle = `background-color: ${config.columnColors[col]} !important;`;
