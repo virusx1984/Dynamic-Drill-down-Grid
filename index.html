@@ -217,12 +217,20 @@
             <div class="card-body">
                 <div class="row mb-3">
                     <div class="col-md-4">
-                        <label class="form-label fw-bold">How many aggregation levels?</label>
-                        <select id="levelCount" class="form-select">
-                            <option value="1">1 Level</option>
-                            <option value="2" selected>2 Levels</option>
-                            <option value="3">3 Levels</option>
-                        </select>
+                        <label class="form-label fw-bold d-block">How many aggregation levels?</label>
+                        <div class="btn-group w-100" role="group" aria-label="Level Count selection">
+                            <input type="radio" class="btn-check" name="levelCount" id="level1" value="1"
+                                autocomplete="off">
+                            <label class="btn btn-outline-primary" for="level1">1 Level</label>
+
+                            <input type="radio" class="btn-check" name="levelCount" id="level2" value="2"
+                                autocomplete="off" checked>
+                            <label class="btn btn-outline-primary" for="level2">2 Levels</label>
+
+                            <input type="radio" class="btn-check" name="levelCount" id="level3" value="3"
+                                autocomplete="off">
+                            <label class="btn btn-outline-primary" for="level3">3 Levels</label>
+                        </div>
                     </div>
                 </div>
 
@@ -231,7 +239,7 @@
                 <div class="mb-3">
                     <div class="row align-items-end mb-2">
                         <div class="col-md-5">
-                            <label class="form-label fw-bold mb-1">Select Metric Columns (Sum):</label>
+                            <label class="form-label fw-bold mb-1">Select Metric Columns (Sum) & Colors:</label>
                             <div class="text-muted small mb-2">Only 'aggregation' type columns are shown here.</div>
                             <input type="text" id="metricFilter" class="form-control form-control-sm"
                                 placeholder="Filter columns (Text or Regex supported)...">
@@ -395,10 +403,11 @@
             $('#configSection').removeClass('d-none');
             renderGroupSelectors();
             renderValueSelectors();
-            initBatchColorPicker(); // NEW
+            initBatchColorPicker();
         }
 
-        $('#levelCount').on('change', renderGroupSelectors);
+        // CHANGED: Listen to Radio Button change instead of Select change
+        $(document).on('change', 'input[name="levelCount"]', renderGroupSelectors);
 
         function initBatchColorPicker() {
             const $select = $('#batchColorSelect');
@@ -407,14 +416,14 @@
                 $select.append(`<option value="${c.val}" style="background-color:${c.val};">${c.name}</option>`);
             });
 
-            // Dynamic background update for the batch select itself
             $select.on('change', function () {
                 $(this).css('background-color', $(this).val());
             });
         }
 
         function renderGroupSelectors() {
-            const count = parseInt($('#levelCount').val());
+            // CHANGED: Get value from Checked Radio Button
+            const count = parseInt($('input[name="levelCount"]:checked').val());
             const container = $('#groupColsContainer');
             container.empty();
             const categoryCols = headers.filter(h => columnTypes[h] === 'category');
@@ -490,16 +499,13 @@
                 $('.metric-item.d-flex .val-col-check:not(:disabled)').prop('checked', false);
             });
 
-            // NEW: Batch Set Color for Visible & Selected
+            // Batch Set Color
             $('#btnBatchColor').off('click').on('click', function () {
                 const selectedColor = $('#batchColorSelect').val();
-
-                // Iterate over items that are Visible AND Checked
+                // Iterate over Visible AND Checked items
                 $('.metric-item.d-flex .val-col-check:checked').each(function () {
                     const $item = $(this).closest('.metric-item');
                     const $colorSelect = $item.find('.color-select');
-
-                    // Update value and background color
                     $colorSelect.val(selectedColor);
                     $colorSelect.css('background-color', selectedColor);
                 });
