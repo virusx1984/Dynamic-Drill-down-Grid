@@ -1,0 +1,125 @@
+/* --- Custom Scrollbar --- */
+.table-container {
+    max-height: 75vh;
+    overflow: auto;
+    position: relative;
+    border: 1px solid #dee2e6;
+    scrollbar-width: thin;
+    scrollbar-color: #adb5bd #f1f1f1;
+}
+.table-container::-webkit-scrollbar { width: 8px; height: 8px; }
+.table-container::-webkit-scrollbar-track { background: #f1f1f1; }
+.table-container::-webkit-scrollbar-thumb { background: #adb5bd; border-radius: 4px; }
+.table-container::-webkit-scrollbar-thumb:hover { background: #6c757d; }
+
+/* --- Table Layout --- */
+#mainTable {
+    border-collapse: separate; 
+    border-spacing: 0;
+    width: 100%;
+    margin-bottom: 0;
+    font-size: 0.9rem;
+}
+
+/* --- Borders & No Wrap --- */
+#mainTable th, #mainTable td {
+    white-space: nowrap;
+    padding: 0.3rem 0.5rem;
+    vertical-align: middle;
+    border: 1px solid #dee2e6 !important;
+    border-top: none !important;
+    border-left: none !important;
+}
+#mainTable thead th { border-top: 1px solid #dee2e6 !important; }
+#mainTable tbody td:first-child, #mainTable thead th:first-child { border-left: 1px solid #dee2e6 !important; }
+
+/* --- Sticky Logic --- */
+#mainTable thead th {
+    position: sticky;
+    top: 0;
+    /* bg-color set by JS */
+    color: white;
+    z-index: 20;
+    cursor: pointer;
+    user-select: none;
+    box-shadow: none !important;
+    transition: filter 0.2s; 
+}
+
+#mainTable thead th:hover { 
+    filter: brightness(1.2); 
+}
+
+.sticky-col {
+    position: sticky;
+    z-index: 10;
+    background-color: #f8f9fa;
+    box-shadow: none !important;
+}
+
+/* Intersection handling */
+thead th.sticky-col { 
+    z-index: 30 !important; 
+    color: white; 
+}
+
+tfoot th.sticky-col, tfoot td.sticky-col { z-index: 30 !important; background-color: #e9ecef; bottom: 0; }
+
+/* Row Hover */
+.clickable-row { cursor: pointer; }
+.clickable-row:hover td { background-color: #e2e6ea; }
+.clickable-row:hover td.sticky-col { background-color: #dbe2e8; }
+
+.sort-icon { font-size: 0.8em; margin-left: 5px; color: rgba(255,255,255,0.7); }
+.sort-active { color: #fff; }
+
+/* Metric Item Styles */
+.metric-item { 
+    min-width: 160px;
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+/* Color Select Styling */
+.color-select {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    cursor: pointer;
+    appearance: none; 
+    border-radius: 50%;
+}
+
+/* Batch Color Picker Style */
+#batchColorSelect option {
+    color: white;
+}
+
+/* Total Row */
+tfoot {
+    position: sticky;
+    bottom: 0;
+    background-color: #e9ecef;
+    font-weight: bold;
+    z-index: 15;
+    box-shadow: none !important;
+    border-top: 2px solid #adb5bd !important;
+}
+
+.drop-zone {
+    border: 2px dashed #dee2e6;
+    border-radius: 5px;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.2s ease;
+    background-color: #f8f9fa;
+    cursor: pointer;
+}
+.drop-zone:hover, .drop-zone.dragover {
+    border-color: #0d6efd;
+    background-color: #e9ecef;
+}
+.drop-zone p { pointer-events: none; }
