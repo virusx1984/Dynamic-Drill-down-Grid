@@ -503,7 +503,7 @@
             $('#btnBatchColor').off('click').on('click', function () {
                 const selectedColor = $('#batchColorSelect').val();
                 // Iterate over Visible AND Checked items
-                $('.metric-item.d-flex .val-col-check:checked').each(function () {
+                $('.metric-item.d-flex').each(function () {
                     const $item = $(this).closest('.metric-item');
                     const $colorSelect = $item.find('.color-select');
                     $colorSelect.val(selectedColor);
