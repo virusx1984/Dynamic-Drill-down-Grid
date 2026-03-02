@@ -5,6 +5,9 @@ let colMap = {};
 let columnTypes = {};   
 let config = { levels: [], valueCols: [], columnColors: {} };
 
+// Store configuration objects
+let savedConfigs = []; 
+
 // Sort State
 let currentLevel = 0;   
 let filterStack = [];   
@@ -76,6 +79,13 @@ function processFile(file) {
                     columnTypes[headers[i]] = type;
                 });
 
+                // Load saved configs if present in JSON
+                if (json.saved_configs && Array.isArray(json.saved_configs)) {
+                    savedConfigs = json.saved_configs;
+                } else {
+                    savedConfigs = [];
+                }
+
                 initConfigurationUI();
                 $('#uploadSection').addClass('d-none');
                 $('#btnReset').removeClass('d-none'); 
@@ -104,6 +114,9 @@ function initConfigurationUI() {
     renderGroupSelectors();
     renderValueSelectors();
     initBatchColorPicker();
+    
+    // Initialize Config Management Dropdown
+    updateSavedConfigUI(); 
 }
 
 $(document).on('change', 'input[name="levelCount"]', renderGroupSelectors);
@@ -144,22 +157,25 @@ function renderValueSelectors() {
     container.empty();
     const aggCols = headers.filter(h => columnTypes[h] === 'aggregation');
 
-    aggCols.forEach(h => {
+    aggCols.forEach((h, index) => {
         let colorOptions = PREDEFINED_COLORS.map(c => 
             `<option value="${c.val}" style="background-color:${c.val}; color:white;">${c.name}</option>`
         ).join('');
 
+        // FIX: Use index-based safe ID for HTML labels to avoid space/special character escaping issues
+        const safeId = `chk_metric_${index}`;
+
         container.append(`
             <div class="metric-item d-flex align-items-center">
                 <div class="form-check mb-0 me-2">
-                    <input class="form-check-input val-col-check" type="checkbox" value="${h}" id="chk_${h}" checked>
+                    <input class="form-check-input val-col-check" type="checkbox" value="${h}" id="${safeId}" checked>
                 </div>
                 <select class="form-select form-select-sm p-0 ps-1 me-2 color-select" title="Header Color" 
                         style="width: 24px; height: 24px; background-color: #212529; color: transparent;"
                         onchange="this.style.backgroundColor=this.value">
                     ${colorOptions}
                 </select>
-                <label class="form-check-label text-truncate" for="chk_${h}" title="${h}">${h}</label>
+                <label class="form-check-label text-truncate" for="${safeId}" title="${h}">${h}</label>
             </div>
         `);
     });
@@ -220,6 +236,163 @@ function bindMetricFilterEvents() {
         });
     });
 }
+
+// --- 2.5 Configuration Management (Load / Save / Export) ---
+
+function updateSavedConfigUI() {
+    const $select = $('#savedConfigSelect');
+    const $section = $('#savedConfigSection');
+    
+    if (savedConfigs.length > 0) {
+        $section.removeClass('d-none');
+        $select.find('option:not(:first)').remove(); // Keep default option
+        
+        savedConfigs.forEach((conf, index) => {
+            $select.append(`<option value="${index}">${conf.name}</option>`);
+        });
+    } else {
+        $section.addClass('d-none');
+    }
+}
+
+// Load Configuration
+$('#btnLoadConfig').click(function() {
+    const selectedIndex = $('#savedConfigSelect').val();
+    if (selectedIndex === "") {
+        alert("Please select a configuration to load.");
+        return;
+    }
+
+    const conf = savedConfigs[selectedIndex];
+
+    // 1. Set Level Radio Button and trigger change to re-render dropdowns
+    const levelCount = conf.levels.length;
+    $(`input[name="levelCount"][value="${levelCount}"]`).prop('checked', true).trigger('change');
+
+    // 2. Set Group Selectors (Need delay to allow DOM to render)
+    setTimeout(() => {
+        $('.level-select').each(function(index) {
+            if (conf.levels[index]) {
+                $(this).val(conf.levels[index]);
+            }
+        });
+
+        // 3. Set Metric Checkboxes and Colors
+        $('.val-col-check').prop('checked', false); // Uncheck all
+        $('.color-select').val('#212529').css('background-color', '#212529'); // Reset colors
+
+        conf.valueCols.forEach(colName => {
+            // FIX: Robust way to find checkbox by value instead of ID, avoiding escaping issues
+            const $chk = $('.val-col-check').filter(function() {
+                return $(this).val() === colName;
+            });
+            
+            if ($chk.length) {
+                $chk.prop('checked', true);
+                
+                // Set color if saved
+                if (conf.columnColors && conf.columnColors[colName]) {
+                    const colorHex = conf.columnColors[colName];
+                    const $colorSelect = $chk.closest('.metric-item').find('.color-select');
+                    $colorSelect.val(colorHex).css('background-color', colorHex);
+                }
+            }
+        });
+    }, 50);
+});
+
+// Save Configuration
+$('#btnSaveConfig').click(function() {
+    const configName = $('#newConfigName').val().trim();
+    if (!configName) {
+        alert("Please enter a name for this configuration.");
+        return;
+    }
+
+    // Gather current UI state
+    let currentLevels = [];
+    $('.level-select').each(function() { 
+        if($(this).val()) currentLevels.push($(this).val()); 
+    });
+    
+    let currentMetrics = [];
+    let currentColors = {}; 
+
+    $('.val-col-check:checked').each(function() {
+        const colName = $(this).val();
+        currentMetrics.push(colName);
+        const colorVal = $(this).closest('.metric-item').find('.color-select').val();
+        
+        // Only save color if it's not the default black (saves file space)
+        if(colorVal !== '#212529') {
+            currentColors[colName] = colorVal;
+        }
+    });
+
+    if (currentLevels.length === 0 || currentMetrics.length === 0) {
+        alert("Please select at least one level and one metric column to save a config.");
+        return;
+    }
+
+    const newConfig = {
+        name: configName,
+        levels: currentLevels,
+        valueCols: currentMetrics,
+        columnColors: currentColors
+    };
+
+    // Check if config name already exists (Overwrite logic)
+    const existingIndex = savedConfigs.findIndex(c => c.name === configName);
+    if (existingIndex >= 0) {
+        if(confirm(`Configuration "${configName}" already exists. Overwrite?`)) {
+            savedConfigs[existingIndex] = newConfig;
+        } else {
+            return;
+        }
+    } else {
+        savedConfigs.push(newConfig);
+    }
+
+    $('#newConfigName').val(''); // Clear input field
+    updateSavedConfigUI(); // Refresh dropdown
+    alert("Configuration saved to memory!");
+});
+
+// Export JSON
+$('#btnExportJSON').click(function() {
+    if(rawData.length === 0) {
+        alert("No data to export.");
+        return;
+    }
+
+    // Map column types correctly
+    const colTypesArray = headers.map(h => columnTypes[h]);
+
+    // Build final export object
+    const exportObj = {
+        columns: headers,
+        col_types: colTypesArray,
+        data: rawData,
+        saved_configs: savedConfigs
+    };
+
+    // Create Blob and download
+    const jsonString = JSON.stringify(exportObj, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'data_with_configs.json'; // Default download name
+    document.body.appendChild(a);
+    a.click();
+    
+    // Cleanup URL to avoid memory leaks
+    setTimeout(() => {
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    }, 0);
+});
 
 // --- 3. Grid Generation ---
 $('#btnGenerate').on('click', function() {
@@ -447,7 +620,8 @@ function renderTable(data, groupCol, isDetail) {
 
     if (sortState.col) {
         const arrow = sortState.dir === 'asc' ? '↑' : '↓';
-        $(`th[data-col="${sortState.col}"] .sort-icon`).text(arrow).addClass('sort-active');
+        // Need to escape col selector in case column name has spaces or special chars
+        $(`th[data-col="${$.escapeSelector(sortState.col)}"] .sort-icon`).text(arrow).addClass('sort-active');
     }
 
     $thead.find('th').click(function() {
